@@ -43,6 +43,7 @@ struct Vector3D {
 public:
     inline f32 dot(Vector3D b);
     inline f32 length();
+    inline f32 lengthSq();
 
     inline Vector3D cross(Vector3D b);
     inline Vector3D normalized();
@@ -242,6 +243,10 @@ inline Vector3D Vector3D::cross(Vector3D b) {
 
 inline f32 Vector3D::length() {
     return sqrt(x*x + y*y + z*z);
+}
+
+inline f32 Vector3D::lengthSq() {
+    return x*x + y*y + z*z;
 }
 
 inline Vector3D Vector3D::normalized() {

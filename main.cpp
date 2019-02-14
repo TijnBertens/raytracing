@@ -2,6 +2,8 @@
 #include <cstdio>
 #include "types.h"
 #include "math_utils.h"
+#include "color.h"
+#include "ray.h"
 
 /**
  * It is important that the bitmap header is not padded!
@@ -39,13 +41,13 @@ struct BitmapHeader {
  */
 struct Bitmap {
     BitmapHeader header;
-    u32 *data;
+    Color *data;
 };
 
 /**
  * Saves out a bitmap to a specified file path.
  */
-bool saveOutBitmap(Bitmap bitmap, char *filePath) {
+bool saveOutBitmap(Bitmap bitmap, const char *filePath) {
     FILE *outFile = fopen(filePath, "wb");
 
     if(outFile) {
@@ -63,7 +65,7 @@ bool saveOutBitmap(Bitmap bitmap, char *filePath) {
  * Creates a bitmap with the given data, of the specified width and height. The header will automatically be filled in
  * with the standard values used in this program.
  */
-Bitmap createBitmap(u32 *data, u32 width, u32 height) {
+Bitmap createBitmap(Color *data, u32 width, u32 height) {
     Bitmap result = {};
 
     result.header.fileType = 0x4D42;                            // 'BM'
@@ -109,7 +111,7 @@ Vector3D pixelToWorldSpace(Camera camera, u32 x, u32 y, u32 width, u32 height) {
     Vector3D screenHorizontalDirection = camera.upVector.cross(camera.viewDirection).normalized();
 
     f32 screenHeight = 2 * (f32) tan((camera.fovy / 2.0) * PI_32 / 180.0) * camera.nearClippingDistance;
-    f32 screenWidth =  2 * screenHeight * camera.aspectRatio;
+    f32 screenWidth =  screenHeight * camera.aspectRatio;
 
     Vector3D botLeft =
             screenCenter
@@ -135,21 +137,127 @@ Vector3D pixelToWorldSpace(Camera camera, u32 x, u32 y, u32 width, u32 height) {
     return result;
 }
 
+
+// DEBUG: temporary quick light object
+struct PointLight {
+    Vector3D position;
+};
+
+
 int main(){
+
+    Triangle t = {};
+    t.A = {-1, -1, 0};
+    t.B = {1, -1, 0};
+    t.C = {0, 1, 2};
+
+    Ray ray = {};
+    ray.start = {0, 0, 0};
+    ray.direction = {0, 0, 1};
+
+    RayHit report = intersect(ray, t);
+
+    if(report.hit) {
+        printf("HIT, TOI = %f,  hit position = (%f, %f, %f)", report.TOI, report.hitPosition.x, report.hitPosition.y, report.hitPosition.z);
+    } else {
+        printf("NO HIT");
+    }
+
+
+
+    u32 width = 1920;
+    u32 height = 1080;
+
+    Color *pixels = (Color *) malloc(sizeof(Color) * width *  height);
+
     Camera camera = {};
 
-    camera.position = {0, 0, 0};
+    camera.position = {0, 1, 0};
     camera.viewDirection = {0, 0, 1};
     camera.upVector = {0, 1, 0};
 
     camera.fovy = 90;
-    camera.nearClippingDistance = 1;
-    camera.aspectRatio = 1280.0 / 720.0;
+    camera.nearClippingDistance = 0.1f;
+    camera.aspectRatio = (f32) width / (f32) height;
 
+#define numTestSpheres 3
+    Sphere spheres[numTestSpheres] = {};
+    spheres[0].position = {0, 2, 10};
+    spheres[0].radius = 2;
 
-    Vector3D ws = pixelToWorldSpace(camera, 1280, 720, 1280, 720);
+    spheres[1].position = {8, 3, 9};
+    spheres[1].radius = 3;
 
-    printf("{%f, %f, %f} \n", ws.x, ws.y, ws.z);
+    spheres[2].position = {-2, 1, 8};
+    spheres[2].radius = 1;
+
+#define numTestTriangles 4
+    Triangle triangles[numTestTriangles];
+
+    // floor
+
+    triangles[0].B = {-50, 0, -50};
+    triangles[0].A = { 50, 0, -50};
+    triangles[0].C = {-50, 0,  50};
+
+    triangles[1].B = {-50, 0,  50};
+    triangles[1].A = { 50, 0, -50};
+    triangles[1].C = { 50, 0,  50};
+
+    // back wall
+
+    triangles[2].B = {-50, 20,  50};
+    triangles[2].A = {-50,  0,  50};
+    triangles[2].C = { 50,  0,  50};
+
+    triangles[3].B = {-50, 20,  50};
+    triangles[3].A = { 50,  0,  50};
+    triangles[3].C = { 50, 20,  50};
+
+    PointLight light = {};
+    light.position = {-5,3, 5};
+
+    for(u32 y = 0; y < height; y++) {
+        for(u32 x = 0; x < width; x++) {
+
+            Vector3D wPixel = pixelToWorldSpace(camera, x, y, width, height);
+
+            Vector3D rayP = wPixel;
+            Vector3D rayD = (wPixel - camera.position).normalized();
+
+            Ray ray = {};
+            ray.start = rayP;
+            ray.direction = rayD;
+
+            SceneTraceReport traceReport = traceThroughScene(ray, spheres, numTestSpheres, triangles, numTestTriangles);
+
+            if(traceReport.hit.hit) {
+                Vector3D hitToLight = (light.position - traceReport.hit.hitPosition);
+
+                Ray shadowRay = {};
+                shadowRay.start = traceReport.hit.hitPosition;
+                shadowRay.direction = hitToLight.normalized();
+
+                SceneTraceReport shadowTrace = traceThroughScene(shadowRay, spheres, numTestSpheres, triangles, numTestTriangles);
+
+                Color ambient = {0xFF202020};
+
+                if(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length()) {
+                    pixels[x + y * width] = ambient;
+                } else {
+                    pixels[x + y * width] = ambient + fmax(0, shadowRay.direction.dot(traceReport.hit.hitNormal)) * traceReport.color;
+                }
+
+            } else {
+                pixels[x + y * width] = {0xFF000000};
+            }
+        }
+    }
+
+    saveOutBitmap(createBitmap(pixels, width, height), "P:/raytracing/res/restracing_test.bmp");
+
+    free(pixels);
+
 
     return 0;
 }
