@@ -145,26 +145,6 @@ struct PointLight {
 
 
 int main(){
-
-    Triangle t = {};
-    t.A = {-1, -1, 0};
-    t.B = {1, -1, 0};
-    t.C = {0, 1, 2};
-
-    Ray ray = {};
-    ray.start = {0, 0, 0};
-    ray.direction = {0, 0, 1};
-
-    RayHit report = intersect(ray, t);
-
-    if(report.hit) {
-        printf("HIT, TOI = %f,  hit position = (%f, %f, %f)", report.TOI, report.hitPosition.x, report.hitPosition.y, report.hitPosition.z);
-    } else {
-        printf("NO HIT");
-    }
-
-
-
     u32 width = 1920;
     u32 height = 1080;
 

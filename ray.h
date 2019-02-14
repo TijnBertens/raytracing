@@ -110,9 +110,9 @@ RayHit intersect(Ray ray, Triangle triangle) {
 
     Vector3D hitPosition = ray.start + t*ray.direction;
 
-    Vector3D normalAB = (triangle.B - triangle.A).cross(planeNormal).normalized();
-    Vector3D normalBC = (triangle.C - triangle.B).cross(planeNormal).normalized();
-    Vector3D normalCA = (triangle.A - triangle.C).cross(planeNormal).normalized();
+    Vector3D normalAB = (triangle.B - triangle.A).cross(planeNormal);
+    Vector3D normalBC = (triangle.C - triangle.B).cross(planeNormal);
+    Vector3D normalCA = (triangle.A - triangle.C).cross(planeNormal);
 
     Vector3D AH = hitPosition - triangle.A;
     Vector3D BH = hitPosition - triangle.B;
