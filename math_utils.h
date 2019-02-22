@@ -47,6 +47,7 @@ public:
 
     inline Vector3D cross(Vector3D b);
     inline Vector3D normalized();
+    inline Vector3D reflectIn(Vector3D b);
 };
 
 struct Vector4D {
@@ -224,43 +225,6 @@ inline Vector2D operator/(Vector2D v, f32 f) {
  */
 
 /*
- * Methods
- */
-
-inline f32 Vector3D::dot(Vector3D b) {
-    return x*b.x + y*b.y + z*b.z;
-}
-
-inline Vector3D Vector3D::cross(Vector3D b) {
-    Vector3D result = {};
-
-    result.x = y*b.z - z*b.y;
-    result.y = z*b.x - x*b.z;
-    result.z = x*b.y - y*b.x;
-
-    return result;
-}
-
-inline f32 Vector3D::length() {
-    return sqrt(x*x + y*y + z*z);
-}
-
-inline f32 Vector3D::lengthSq() {
-    return x*x + y*y + z*z;
-}
-
-inline Vector3D Vector3D::normalized() {
-    Vector3D result = {};
-
-    f32 length = this->length();
-    result.x = this->x / length;
-    result.y = this->y / length;
-    result.z = this->z / length;
-
-    return result;
-}
-
-/*
  * OPERATORS
  */
 
@@ -330,6 +294,51 @@ inline Vector3D operator/(Vector3D v, f32 f) {
     result.x = v.x / f;
     result.y = v.y / f;
     result.z = v.z / f;
+
+    return result;
+}
+
+/*
+ * Methods
+ */
+
+inline f32 Vector3D::dot(Vector3D b) {
+    return x*b.x + y*b.y + z*b.z;
+}
+
+inline Vector3D Vector3D::cross(Vector3D b) {
+    Vector3D result = {};
+
+    result.x = y*b.z - z*b.y;
+    result.y = z*b.x - x*b.z;
+    result.z = x*b.y - y*b.x;
+
+    return result;
+}
+
+inline f32 Vector3D::length() {
+    return sqrt(x*x + y*y + z*z);
+}
+
+inline f32 Vector3D::lengthSq() {
+    return x*x + y*y + z*z;
+}
+
+inline Vector3D Vector3D::normalized() {
+    Vector3D result = {};
+
+    f32 length = this->length();
+    result.x = this->x / length;
+    result.y = this->y / length;
+    result.z = this->z / length;
+
+    return result;
+}
+
+inline Vector3D Vector3D::reflectIn(Vector3D b) {
+    Vector3D result = {};
+
+    result = *this - 2.0f*(this->dot(b))*b;
 
     return result;
 }

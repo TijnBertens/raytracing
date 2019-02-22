@@ -4,6 +4,7 @@
 #include "math_utils.h"
 #include "color.h"
 #include "ray.h"
+#include "scene.h"
 
 /**
  * It is important that the bitmap header is not padded!
@@ -137,16 +138,58 @@ Vector3D pixelToWorldSpace(Camera camera, u32 x, u32 y, u32 width, u32 height) {
     return result;
 }
 
+Color calculateSurfaceColorFromLight(Vector3D viewPosition, Vector3D surfacePosition, Material surface, PointLight light, Vector3D normal) {
+    Color ambient = light.ambientIntensity * surface.color;
 
-// DEBUG: temporary quick light object
-struct PointLight {
-    Vector3D position;
-};
+    // diffuse
+    Vector3D lightDirection = (light.position - surfacePosition).normalized();
+    f32 diff = fmax(normal.dot(lightDirection), 0.0);
+    Color diffuse = diff * surface.color;
+
+    // specular
+    Vector3D viewDir = (viewPosition - surfacePosition).normalized();
+    Vector3D reflectDir = (-lightDirection).reflectIn(normal);
+    f32 spec = pow(fmax(viewDir.dot(reflectDir), 0.0), surface.shininess);
+    Color specular = surface.specularIntensity * spec * surface.color;
+
+    Color result = ambient + diffuse;// + specular;
+    return result;
+}
+
+Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
+    SceneIntersectReport sceneIntersect = intersectScene(ray, scene);
+
+    // Did not hit anything, so we can return the background color
+    if(!sceneIntersect.hit.hit) {
+        return {0xFF000000}; // todo: background color
+    }
+
+    Color surfaceColor = {0xFF000000};
+    for(u32 i = 0; i < scene.numLights; i++) {
+        Vector3D hitToLight = (scene.lights[i].position - sceneIntersect.hit.hitPosition);
+
+        Ray shadowRay = {};
+        shadowRay.start = sceneIntersect.hit.hitPosition;
+        shadowRay.direction = hitToLight.normalized();
+
+        SceneIntersectReport shadowTrace = intersectScene(shadowRay, scene);
+
+        if(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length()) {
+            surfaceColor = surfaceColor + (scene.lights[i].ambientIntensity * sceneIntersect.hitMaterial.color);
+        } else {
+            surfaceColor = surfaceColor + calculateSurfaceColorFromLight(ray.start, sceneIntersect.hit.hitPosition, sceneIntersect.hitMaterial, scene.lights[i], sceneIntersect.hit.hitNormal);
+        }
+    }
+
+    //todo: reflection and refraction
+
+    return surfaceColor;
+}
 
 
-int main(){
-    u32 width = 1920;
-    u32 height = 1080;
+int main() {
+    u32 width = 1920*2;
+    u32 height = 1080*2;
 
     Color *pixels = (Color *) malloc(sizeof(Color) * width *  height);
 
@@ -161,41 +204,68 @@ int main(){
     camera.aspectRatio = (f32) width / (f32) height;
 
 #define numTestSpheres 3
-    Sphere spheres[numTestSpheres] = {};
-    spheres[0].position = {0, 2, 10};
-    spheres[0].radius = 2;
+    SphereObject spheres[numTestSpheres] = {};
+    spheres[0].sphere.position = {0, 2, 10};
+    spheres[0].sphere.radius = 2;
+    spheres[0].material.color = {0xFFAA0000};
+    spheres[0].material.shininess = 0.25f;
 
-    spheres[1].position = {8, 3, 9};
-    spheres[1].radius = 3;
+    spheres[1].sphere.position = {8, 3, 9};
+    spheres[1].sphere.radius = 3;
+    spheres[1].material.color = {0xFF00AA00};
+    spheres[1].material.shininess = 0.25f;
 
-    spheres[2].position = {-2, 1, 8};
-    spheres[2].radius = 1;
+    spheres[2].sphere.position = {-2, 1, 8};
+    spheres[2].sphere.radius = 1;
+    spheres[2].material.color = {0xFF0000AA};
+    spheres[2].material.shininess = 0.25f;
 
 #define numTestTriangles 4
-    Triangle triangles[numTestTriangles];
+    TriangleObject triangles[numTestTriangles];
 
     // floor
 
-    triangles[0].B = {-50, 0, -50};
-    triangles[0].A = { 50, 0, -50};
-    triangles[0].C = {-50, 0,  50};
+    triangles[0].triangle.B = {-50, 0, -50};
+    triangles[0].triangle.A = { 50, 0, -50};
+    triangles[0].triangle.C = {-50, 0,  50};
+    triangles[0].material.color = {0xFF202020};
+    triangles[0].material.shininess = 0.078125f;
 
-    triangles[1].B = {-50, 0,  50};
-    triangles[1].A = { 50, 0, -50};
-    triangles[1].C = { 50, 0,  50};
+    triangles[1].triangle.B = {-50, 0,  50};
+    triangles[1].triangle.A = { 50, 0, -50};
+    triangles[1].triangle.C = { 50, 0,  50};
+    triangles[1].material.color = {0xFF202020};
+    triangles[1].material.shininess = 0.078125f;
 
     // back wall
 
-    triangles[2].B = {-50, 20,  50};
-    triangles[2].A = {-50,  0,  50};
-    triangles[2].C = { 50,  0,  50};
+    triangles[2].triangle.B = {-50, 20,  50};
+    triangles[2].triangle.A = {-50,  0,  50};
+    triangles[2].triangle.C = { 50,  0,  50};
+    triangles[2].material.color = {0xFF202020};
+    triangles[2].material.shininess = 0.078125f;
 
-    triangles[3].B = {-50, 20,  50};
-    triangles[3].A = { 50,  0,  50};
-    triangles[3].C = { 50, 20,  50};
+    triangles[3].triangle.B = {-50, 20,  50};
+    triangles[3].triangle.A = { 50,  0,  50};
+    triangles[3].triangle.C = { 50, 20,  50};
+    triangles[3].material.color = {0xFF202020};
+    triangles[3].material.shininess = 0.078125f;
 
-    PointLight light = {};
-    light.position = {-5,3, 5};
+#define numTestLights 2
+    PointLight lights[numTestLights] = {};
+    lights[0].position = {-5,3, 5};
+    lights[0].ambientIntensity = 0.01f;
+
+    lights[1].position = {5,5, 4};
+    lights[1].ambientIntensity = 0.05f;
+
+    Scene scene = {};
+    scene.spheres = spheres;
+    scene.numSpheres = numTestSpheres;
+    scene.triangles = triangles;
+    scene.numTriangles = numTestTriangles;
+    scene.lights = lights;
+    scene.numLights = numTestLights;
 
     for(u32 y = 0; y < height; y++) {
         for(u32 x = 0; x < width; x++) {
@@ -209,7 +279,24 @@ int main(){
             ray.start = rayP;
             ray.direction = rayD;
 
-            SceneTraceReport traceReport = traceThroughScene(ray, spheres, numTestSpheres, triangles, numTestTriangles);
+            pixels[x + y * width] = traceThroughScene(ray, scene);
+        }
+    }
+
+    #if 0
+    for(u32 y = 0; y < height; y++) {
+        for(u32 x = 0; x < width; x++) {
+
+            Vector3D wPixel = pixelToWorldSpace(camera, x, y, width, height);
+
+            Vector3D rayP = wPixel;
+            Vector3D rayD = (wPixel - camera.position).normalized();
+
+            Ray ray = {};
+            ray.start = rayP;
+            ray.direction = rayD;
+
+            SceneTraceReport traceReport = intersectScene(ray, scene);
 
             if(traceReport.hit.hit) {
                 Vector3D hitToLight = (light.position - traceReport.hit.hitPosition);
@@ -218,7 +305,7 @@ int main(){
                 shadowRay.start = traceReport.hit.hitPosition;
                 shadowRay.direction = hitToLight.normalized();
 
-                SceneTraceReport shadowTrace = traceThroughScene(shadowRay, spheres, numTestSpheres, triangles, numTestTriangles);
+                SceneTraceReport shadowTrace = intersectScene(shadowRay, scene);
 
                 Color ambient = {0xFF202020};
 
@@ -233,11 +320,54 @@ int main(){
             }
         }
     }
+    #endif
+
+    u32 halfWidth = width / 2;
+    u32 halfHeight = height / 2;
+
+    Color *aaPixels = (Color *) malloc(sizeof(Color) * halfWidth * halfHeight);
+
+    for(u32 xx = 0; xx < halfWidth; xx++) {
+        for(u32 yy = 0; yy < halfHeight; yy++) {
+            u32 x = 2*xx;
+            u32 y = 2*yy;
+
+            u16 r, g, b, a;
+
+            r = pixels[x + y * width].r
+                    +pixels[(x+1) + y * width].r
+                    +pixels[x + (y+1) * width].r
+                    +pixels[(x+1) + (y+1) * width].r;
+
+            g = pixels[x + y * width].g
+                +pixels[(x+1) + y * width].g
+                +pixels[x + (y+1) * width].g
+                +pixels[(x+1) + (y+1) * width].g;
+
+            b = pixels[x + y * width].b
+                +pixels[(x+1) + y * width].b
+                +pixels[x + (y+1) * width].b
+                +pixels[(x+1) + (y+1) * width].b;
+
+            a = pixels[x + y * width].a
+                +pixels[(x+1) + y * width].a
+                +pixels[x + (y+1) * width].a
+                +pixels[(x+1) + (y+1) * width].a;
+
+            aaPixels[xx + yy * halfWidth].r = r /4;
+            aaPixels[xx + yy * halfWidth].g = g /4;
+            aaPixels[xx + yy * halfWidth].b = b /4;
+            aaPixels[xx + yy * halfWidth].a = a /4;
+        }
+    }
 
     saveOutBitmap(createBitmap(pixels, width, height), "P:/raytracing/res/restracing_test.bmp");
+    saveOutBitmap(createBitmap(aaPixels, halfWidth, halfHeight), "P:/raytracing/res/aa_restracing_test.bmp");
 
     free(pixels);
+    free(aaPixels);
 
 
     return 0;
 }
+

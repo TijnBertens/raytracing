@@ -1,0 +1,9 @@
+//TODO:
+
+
+- textures
+- hierarchical bounding box for speedup
+- import models
+- different light types
+- anti-alisasing / super sampling / multiple rays per pixel
+- RTX?
