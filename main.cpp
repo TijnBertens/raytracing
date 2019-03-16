@@ -42,7 +42,7 @@ struct BitmapHeader {
  */
 struct Bitmap {
     BitmapHeader header;
-    Color *data;
+    IntColor *data;
 };
 
 /**
@@ -66,7 +66,7 @@ bool saveOutBitmap(Bitmap bitmap, const char *filePath) {
  * Creates a bitmap with the given data, of the specified width and height. The header will automatically be filled in
  * with the standard values used in this program.
  */
-Bitmap createBitmap(Color *data, u32 width, u32 height) {
+Bitmap createBitmap(IntColor *data, u32 width, u32 height) {
     Bitmap result = {};
 
     result.header.fileType = 0x4D42;                            // 'BM'
@@ -161,10 +161,10 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
 
     // Did not hit anything, so we can return the background color
     if(!sceneIntersect.hit.hit) {
-        return {0xFF000000}; // todo: background color
+        return {0, 0, 0, 1}; // todo: background color
     }
 
-    Color surfaceColor = {0xFF000000};
+    Color surfaceColor = {0, 0, 0, 1};
     for(u32 i = 0; i < scene.numLights; i++) {
         Vector3D hitToLight = (scene.lights[i].position - sceneIntersect.hit.hitPosition);
 
@@ -207,17 +207,17 @@ int main() {
     SphereObject spheres[numTestSpheres] = {};
     spheres[0].sphere.position = {0, 2, 10};
     spheres[0].sphere.radius = 2;
-    spheres[0].material.color = {0xFFAA0000};
+    spheres[0].material.color = {(f32) 0xAA / 255, (f32) 0x00 / 255, (f32) 0x00 / 255, (f32) 0xFF / 255};
     spheres[0].material.shininess = 0.25f;
 
     spheres[1].sphere.position = {8, 3, 9};
     spheres[1].sphere.radius = 3;
-    spheres[1].material.color = {0xFF00AA00};
+    spheres[1].material.color = {(f32) 0x00 / 255, (f32) 0xAA / 255, (f32) 0x00 / 255, (f32) 0xFF / 255};
     spheres[1].material.shininess = 0.25f;
 
     spheres[2].sphere.position = {-2, 1, 8};
     spheres[2].sphere.radius = 1;
-    spheres[2].material.color = {0xFF0000AA};
+    spheres[2].material.color = {(f32) 0x00 / 255, (f32) 0x00 / 255, (f32) 0xAA / 255, (f32) 0xFF / 255};
     spheres[2].material.shininess = 0.25f;
 
 #define numTestTriangles 4
@@ -228,13 +228,13 @@ int main() {
     triangles[0].triangle.B = {-50, 0, -50};
     triangles[0].triangle.A = { 50, 0, -50};
     triangles[0].triangle.C = {-50, 0,  50};
-    triangles[0].material.color = {0xFF202020};
+    triangles[0].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
     triangles[0].material.shininess = 0.078125f;
 
     triangles[1].triangle.B = {-50, 0,  50};
     triangles[1].triangle.A = { 50, 0, -50};
     triangles[1].triangle.C = { 50, 0,  50};
-    triangles[1].material.color = {0xFF202020};
+    triangles[1].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
     triangles[1].material.shininess = 0.078125f;
 
     // back wall
@@ -242,13 +242,13 @@ int main() {
     triangles[2].triangle.B = {-50, 20,  50};
     triangles[2].triangle.A = {-50,  0,  50};
     triangles[2].triangle.C = { 50,  0,  50};
-    triangles[2].material.color = {0xFF202020};
+    triangles[2].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
     triangles[2].material.shininess = 0.078125f;
 
     triangles[3].triangle.B = {-50, 20,  50};
     triangles[3].triangle.A = { 50,  0,  50};
     triangles[3].triangle.C = { 50, 20,  50};
-    triangles[3].material.color = {0xFF202020};
+    triangles[3].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
     triangles[3].material.shininess = 0.078125f;
 
 #define numTestLights 2
@@ -332,7 +332,7 @@ int main() {
             u32 x = 2*xx;
             u32 y = 2*yy;
 
-            u16 r, g, b, a;
+            f32 r, g, b, a;
 
             r = pixels[x + y * width].r
                     +pixels[(x+1) + y * width].r
@@ -361,11 +361,32 @@ int main() {
         }
     }
 
-    saveOutBitmap(createBitmap(pixels, width, height), "P:/raytracing/res/restracing_test.bmp");
-    saveOutBitmap(createBitmap(aaPixels, halfWidth, halfHeight), "P:/raytracing/res/aa_restracing_test.bmp");
+    // Convert color format to that of BMP
+
+    IntColor *bmpPixels = (IntColor *) malloc(sizeof(IntColor) * width * height);
+    IntColor *bmpAaPixels = (IntColor *) malloc(sizeof(IntColor) * halfWidth * halfHeight);
+
+    for(u32 y = 0; y < height; y++) {
+        for (u32 x = 0; x < width; x++) {
+            bmpPixels[x + y * width] = toIntColor(pixels[x + y * width]);
+        }
+    }
+
+    for (u32 y = 0; y < halfHeight; y++) {
+        for(u32 x = 0; x < halfWidth; x++) {
+            bmpAaPixels[x + y * halfWidth] = toIntColor(aaPixels[x + y * halfWidth]);
+        }
+    }
+
+
+    saveOutBitmap(createBitmap(bmpPixels, width, height), "P:/raytracing/res/restracing_test.bmp");
+    saveOutBitmap(createBitmap(bmpAaPixels, halfWidth, halfHeight), "P:/raytracing/res/aa_restracing_test.bmp");
 
     free(pixels);
     free(aaPixels);
+
+    free(bmpPixels);
+    free(bmpAaPixels);
 
 
     return 0;

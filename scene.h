@@ -6,13 +6,10 @@
 #define RAYTRACING_SCENE_H
 
 #include "math_utils.h"
+#include "color.h"
+#include "geometries.h"
 
 struct Material {
-    //Color ambient;
-    //Color diffuse;
-    //Color specular;
-    //f32 shininess;
-
     Color color;
     f32 shininess;
 
