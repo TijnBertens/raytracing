@@ -36,8 +36,9 @@ struct RayHit {
  */
 struct SceneIntersectReport {
     RayHit hit;
-    Material hitMaterial;
+    PBMaterial hitMaterial;
 };
+
 
 /**
  * Intersect a ray with a sphere.

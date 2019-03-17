@@ -620,4 +620,15 @@ inline Quaternion Quaternion::slerp(Quaternion start, Quaternion end, f32 t) {
 }
 
 
+/*
+ * ------------------------------
+ * ----- General Utilities ------
+ * ------------------------------
+ */
+
+inline f32 clamp(f32 n, f32 a, f32 b) {
+    return (fmin(fmax(n, a), b));
+}
+
+
 #endif //CLIONPROJECT_MATH_UTILS_H

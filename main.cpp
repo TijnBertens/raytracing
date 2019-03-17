@@ -138,6 +138,93 @@ Vector3D pixelToWorldSpace(Camera camera, u32 x, u32 y, u32 width, u32 height) {
     return result;
 }
 
+//  ------------------------------------------------------------------------------
+// The following functions are implementations of Physically Based Shading functions
+// all credits to: https://learnopengl.com/PBR/Lighting
+//  ------------------------------------------------------------------------------
+
+/**
+ * Credits to:
+ * https://learnopengl.com/PBR/Lighting
+ */
+Color fresnelSchlick(float cosTheta, Color F0)
+{
+    Color one = {1, 1, 1, 1};
+    return F0 + (one - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+float DistributionGGX(Vector3D N, Vector3D H, f32 roughness)
+{
+    f32 a      = roughness*roughness;
+    f32 a2     = a*a;
+    f32 NdotH  = fmax(N.dot(H), 0.0);
+    f32 NdotH2 = NdotH*NdotH;
+
+    f32 num   = a2;
+    f32 denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI_32 * denom * denom;
+
+    return num / denom;
+}
+
+f32 GeometrySchlickGGX(f32 NdotV, f32 roughness)
+{
+    f32 r = (roughness + 1.0);
+    f32 k = (r*r) / 8.0;
+
+    f32 num   = NdotV;
+    f32 denom = NdotV * (1.0 - k) + k;
+
+    return num / denom;
+}
+f32 GeometrySmith(Vector3D N, Vector3D V, Vector3D L, f32 roughness)
+{
+    f32 NdotV = fmax(N.dot(V), 0.0);
+    f32 NdotL = fmax(N.dot(L), 0.0);
+    f32 ggx2  = GeometrySchlickGGX(NdotV, roughness);
+    f32 ggx1  = GeometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+Color calculateSurfaceColorFromLightPBR(Vector3D viewPosition, Vector3D surfacePosition, PBMaterial surface, PointLight light, Vector3D normal) {
+
+    Vector3D V = (viewPosition - surfacePosition).normalized();
+    Vector3D N = normal;
+
+    Color F0 = {0.3, 0.3, 0.3, 1};
+    F0 = mix(F0, surface.albedo, surface.metallic);
+
+    // calculate per-light radiance
+    Vector3D L = (light.position - surfacePosition).normalized();
+    Vector3D H = (V + L).normalized();
+    f32 distance    = (light.position - surfacePosition).length();
+    f32 attenuation = 1.0 / (distance * distance); //todo: hardcoded attenuation
+
+    Color white = {1, 1, 1, 1};
+    Color radiance     = white; //white * attenuation; //todo: hardcoded light color
+
+    // cook-torrance brdf
+    f32 NDF = DistributionGGX(N, H, surface.roughness);
+    f32 G   = GeometrySmith(N, V, L, surface.roughness);
+    Color F    = fresnelSchlick(fmax(H.dot(V), 0.0), F0);
+
+    Color kS = F;
+    Color kD = {1 - kS.r, 1 - kS.g, 1 - kS.b, 1}; //todo: what about alpha here?  //vec3(1.0) - kS; // here
+    kD = kD * (1.0 - surface.metallic);
+
+    Color numerator    = NDF * G * F;
+    f32 denominator = 4.0 * fmax(N.dot(V), 0.0) * fmax(N.dot(L), 0.0);
+    Color specular     = numerator / fmax(denominator, 0.001);
+
+    // add to outgoing radiance Lo
+    f32 NdotL = fmax(N.dot(L), 0.0);
+    return (kD * surface.albedo / PI_32 + specular) * radiance * NdotL;
+}
+
+//  ------------------------------------------------------------------------------
+//  ------------------------------------------------------------------------------
+
 Color calculateSurfaceColorFromLight(Vector3D viewPosition, Vector3D surfacePosition, Material surface, PointLight light, Vector3D normal) {
     Color ambient = light.ambientIntensity * surface.color;
 
@@ -174,15 +261,20 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
 
         SceneIntersectReport shadowTrace = intersectScene(shadowRay, scene);
 
+        // improvised ambient term
+        Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
+
         if(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length()) {
-            surfaceColor = surfaceColor + (scene.lights[i].ambientIntensity * sceneIntersect.hitMaterial.color);
+            //surfaceColor = surfaceColor + (scene.lights[i].ambientIntensity * sceneIntersect.hitMaterial.color);
+            surfaceColor = ambientTerm;
         } else {
-            surfaceColor = surfaceColor + calculateSurfaceColorFromLight(ray.start, sceneIntersect.hit.hitPosition, sceneIntersect.hitMaterial, scene.lights[i], sceneIntersect.hit.hitNormal);
+            surfaceColor = surfaceColor + calculateSurfaceColorFromLightPBR(ray.start, sceneIntersect.hit.hitPosition, sceneIntersect.hitMaterial, scene.lights[i], sceneIntersect.hit.hitNormal);
+            surfaceColor = surfaceColor + ambientTerm;
         }
     }
 
     //todo: reflection and refraction
-
+    surfaceColor.a = 1; //todo: handle alpha
     return surfaceColor;
 }
 
@@ -207,18 +299,21 @@ int main() {
     SphereObject spheres[numTestSpheres] = {};
     spheres[0].sphere.position = {0, 2, 10};
     spheres[0].sphere.radius = 2;
-    spheres[0].material.color = {(f32) 0xAA / 255, (f32) 0x00 / 255, (f32) 0x00 / 255, (f32) 0xFF / 255};
-    spheres[0].material.shininess = 0.25f;
+    spheres[0].material = PBM_ROUGH_RED;
+    //spheres[0].material.color = {(f32) 0xAA / 255, (f32) 0x00 / 255, (f32) 0x00 / 255, (f32) 0xFF / 255};
+    //spheres[0].material.shininess = 0.25f;
 
     spheres[1].sphere.position = {8, 3, 9};
     spheres[1].sphere.radius = 3;
-    spheres[1].material.color = {(f32) 0x00 / 255, (f32) 0xAA / 255, (f32) 0x00 / 255, (f32) 0xFF / 255};
-    spheres[1].material.shininess = 0.25f;
+    spheres[1].material = PBM_METALLIC_GREEN;
+    //spheres[1].material.color = {(f32) 0x00 / 255, (f32) 0xAA / 255, (f32) 0x00 / 255, (f32) 0xFF / 255};
+    //spheres[1].material.shininess = 0.25f;
 
     spheres[2].sphere.position = {-2, 1, 8};
     spheres[2].sphere.radius = 1;
-    spheres[2].material.color = {(f32) 0x00 / 255, (f32) 0x00 / 255, (f32) 0xAA / 255, (f32) 0xFF / 255};
-    spheres[2].material.shininess = 0.25f;
+    spheres[2].material = PBM_SMOOTH_BLUE;
+    //spheres[2].material.color = {(f32) 0x00 / 255, (f32) 0x00 / 255, (f32) 0xAA / 255, (f32) 0xFF / 255};
+    //spheres[2].material.shininess = 0.25f;
 
 #define numTestTriangles 4
     TriangleObject triangles[numTestTriangles];
@@ -228,28 +323,32 @@ int main() {
     triangles[0].triangle.B = {-50, 0, -50};
     triangles[0].triangle.A = { 50, 0, -50};
     triangles[0].triangle.C = {-50, 0,  50};
-    triangles[0].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
-    triangles[0].material.shininess = 0.078125f;
+    triangles[0].material = PBM_GRAY;
+    //triangles[0].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
+    //triangles[0].material.shininess = 0.078125f;
 
     triangles[1].triangle.B = {-50, 0,  50};
     triangles[1].triangle.A = { 50, 0, -50};
     triangles[1].triangle.C = { 50, 0,  50};
-    triangles[1].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
-    triangles[1].material.shininess = 0.078125f;
+    triangles[1].material = PBM_GRAY;
+    //triangles[1].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
+    //triangles[1].material.shininess = 0.078125f;
 
     // back wall
 
     triangles[2].triangle.B = {-50, 20,  50};
     triangles[2].triangle.A = {-50,  0,  50};
     triangles[2].triangle.C = { 50,  0,  50};
-    triangles[2].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
-    triangles[2].material.shininess = 0.078125f;
+    triangles[2].material = PBM_GRAY;
+    //triangles[2].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
+    //triangles[2].material.shininess = 0.078125f;
 
     triangles[3].triangle.B = {-50, 20,  50};
     triangles[3].triangle.A = { 50,  0,  50};
     triangles[3].triangle.C = { 50, 20,  50};
-    triangles[3].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
-    triangles[3].material.shininess = 0.078125f;
+    triangles[3].material = PBM_GRAY;
+    //triangles[3].material.color = {(f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0x20 / 255, (f32) 0xFF / 255};
+    //triangles[3].material.shininess = 0.078125f;
 
 #define numTestLights 2
     PointLight lights[numTestLights] = {};

@@ -81,6 +81,20 @@ inline Color mix(Color a, Color b) {
 }
 
 /**
+ *  Linear interpolation between color a and b, by some mixFactor [0.0, 1.0].
+ */
+inline Color mix(Color a, Color b, f32 mixFactor) {
+    Color result = {};
+
+    result.r = a.r + mixFactor * (b.r - a.r);
+    result.g = a.g + mixFactor * (b.g - a.g);
+    result.b = a.b + mixFactor * (b.b - a.b);
+    result.a = a.a + mixFactor * (b.a - a.a);
+
+    return result;
+}
+
+/**
  * Computes the sum of colors a and b.
  */
 inline Color operator+(Color a, Color b) {
@@ -90,6 +104,20 @@ inline Color operator+(Color a, Color b) {
     result.g = fmin(1.0, a.g + b.g);
     result.b = fmin(1.0, a.b + b.b);
     result.a = fmin(1.0, a.a + b.a);
+
+    return result;
+}
+
+/**
+ * Computes the difference of colors a and b.
+ */
+inline Color operator-(Color a, Color b) {
+    Color result = {};
+
+    result.r = fmax(0, a.r - b.r);
+    result.g = fmax(0, a.g - b.g);
+    result.b = fmax(0, a.b - b.b);
+    result.a = fmax(0, a.a - b.a);
 
     return result;
 }
@@ -118,6 +146,76 @@ inline Color operator*(Color c, f32 s) {
     result.g = fmin(1.0, s * c.g);
     result.b = fmin(1.0, s * c.b);
     result.a = fmin(1.0, s * c.a);
+
+    return result;
+}
+
+/**
+ * Component wise color-color multiplication for colors.
+ */
+inline Color operator*(Color a, Color b) {
+    Color result = {};
+
+    result.r = a.r * b.r;
+    result.g = a.g * b.g;
+    result.b = a.b * b.b;
+    result.a = a.a * b.a;
+
+    return result;
+}
+
+/**
+ * Scalar multiplication for colors.
+ */
+inline Color operator/(f32 s, Color c) {
+    Color result = {};
+
+    result.r = clamp(c.r / s, 0, 1);
+    result.g = clamp(c.g / s, 0, 1);
+    result.b = clamp(c.b / s, 0, 1);
+    result.a = clamp(c.a / s, 0, 1);
+
+    return result;
+}
+
+/**
+ * Scalar multiplication for colors.
+ */
+inline Color operator/(Color c, f32 s) {
+    Color result = {};
+
+    result.r = clamp(c.r / s, 0, 1);
+    result.g = clamp(c.g / s, 0, 1);
+    result.b = clamp(c.b / s, 0, 1);
+    result.a = clamp(c.a / s, 0, 1);
+
+    return result;
+}
+
+/**
+ * For each component of a color, take the max between that component and n.
+ */
+inline Color cmax(Color c, f32 n) {
+    Color result = {};
+
+    result.r = fmax(c.r, n);
+    result.g = fmax(c.g, n);
+    result.b = fmax(c.b, n);
+    result.a = fmax(c.a, n);
+
+    return result;
+}
+
+/**
+ * For each component of a color, take the min between that component and n.
+ */
+inline Color cmin(Color c, f32 n) {
+    Color result = {};
+
+    result.r = fmin(c.r, n);
+    result.g = fmin(c.g, n);
+    result.b = fmin(c.b, n);
+    result.a = fmin(c.a, n);
 
     return result;
 }
