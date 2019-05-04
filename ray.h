@@ -8,7 +8,6 @@
 #include "color.h"
 #include "math_utils.h"
 #include "geometries.h"
-#include "scene.h"
 
 #define HIT_EPSILON 0.0001f     // correction factor to prevent hit positions getting too close to objects
 
@@ -29,14 +28,6 @@ struct RayHit {
     f32 TOI;                    // time of intersection
     Vector3D hitPosition;       // world space position of intersection
     Vector3D hitNormal;         // world space normal at the hit position//
-};
-
-/**
- * Result of intersecting a ray with a scene.
- */
-struct SceneIntersectReport {
-    RayHit hit;
-    PBMaterial hitMaterial;
 };
 
 
@@ -137,43 +128,6 @@ RayHit intersect(Ray ray, Triangle triangle) {
 
         result.hit = false;
     }
-
-    return result;
-}
-
-/**
- * DEBUG/TEMPORARY: traces a ray through a scene of spheres and triangles.
- * Returns the closest hit (or an empty hit with hit.hit = false if there is no hit) and the color at that point.
- */
-SceneIntersectReport intersectScene(Ray ray, Scene scene) {
-    SceneIntersectReport result = {};
-
-    f32 closestTOI = FP_INFINITE;
-    RayHit closestHit = {};
-
-    for(u32 i = 0; i < scene.numSpheres; i++) {
-        Sphere sphere = scene.spheres[i].sphere;
-        RayHit hit = intersect(ray, sphere);
-
-        if(hit.hit && hit.TOI < closestTOI) {
-            closestHit = hit;
-            closestTOI = hit.TOI;
-            result.hitMaterial = scene.spheres[i].material;
-        }
-    }
-
-    for(u32 i = 0; i < scene.numTriangles; i++) {
-        Triangle triangle = scene.triangles[i].triangle;
-        RayHit hit = intersect(ray, triangle);
-
-        if(hit.hit && hit.TOI < closestTOI) {
-            closestHit = hit;
-            closestTOI = hit.TOI;
-            result.hitMaterial = scene.triangles[i].material;
-        }
-    }
-
-    result.hit = closestHit;
 
     return result;
 }

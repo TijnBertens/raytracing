@@ -92,19 +92,5 @@ bool saveOutBitmap(Bitmap bitmap, const char *filePath) {
     }
 }
 
-/**
- * Saves out a bitmap to a specified file path.
- */
-bool readInBitmap(Bitmap *output, const char *filePath) {
-    FILE *inputFile = fopen(filePath, "rb");
-
-    if(!inputFile) {
-        printf("Failed to load bitmap file, could not open file.");
-        return false;
-    }
-
-    fread
-}
-
 
 #endif //RAYTRACING_FILE_IO_H
