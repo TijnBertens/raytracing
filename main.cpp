@@ -70,7 +70,10 @@ int main() {
 #define numTestLights 2
     PointLight lights[numTestLights] = {};
     lights[0].position = {-5,3, 5};
+    lights[0].color = {.5, 1, .5, 0};
+
     lights[1].position = {5,5, 4};
+    lights[1].color = {1, 0, 0, 0};
 
     Scene scene = {};
     scene.backgroundColor = {0.05f, 0.05f, 0.05f, 1};

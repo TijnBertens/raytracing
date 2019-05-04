@@ -78,6 +78,7 @@ struct TriangleObject {
  */
 struct PointLight {
     Vector3D position;          // world space position
+    Color color;                // color of emitted light
 };
 
 /**
@@ -192,8 +193,8 @@ Color calculateSurfaceColorFromLightPBR(Vector3D viewPosition, Vector3D surfaceP
     f32 distance    = (light.position - surfacePosition).length();
     f32 attenuation = 1.0 / (distance * distance); //todo: hardcoded attenuation
 
-    Color white = {1, 1, 1, 1};
-    Color radiance     = white; //white * attenuation; //todo: hardcoded light color
+    Color lightColor = light.color;
+    Color radiance     = lightColor; //white * attenuation; //todo: hardcoded light color
 
     // cook-torrance brdf
     f32 NDF = DistributionGGX(N, H, surface.roughness);
@@ -300,6 +301,7 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
         SceneIntersectReport shadowTrace = intersectScene(shadowRay, scene);
 
         // improvised ambient term
+        //Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
         Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
 
         if(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length()) {
