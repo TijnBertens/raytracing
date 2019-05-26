@@ -225,6 +225,20 @@ inline Color cmin(Color c, f32 n) {
 //----------------------
 
 /**
+ * Convert to 32bit IntColor.
+ */
+inline Color toColor(IntColor c) {
+    Color result;
+
+    result.r = c.r / 255.0;
+    result.g = c.g / 255.0;
+    result.b = c.b / 255.0;
+    result.a = c.a / 255.0;
+
+    return result;
+}
+
+/**
  *  Mixes two colors by averaging their rgba values.
  */
 inline IntColor mix(IntColor a, IntColor b) {

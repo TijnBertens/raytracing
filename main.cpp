@@ -1,6 +1,7 @@
 #include <malloc.h>
 #include <cstdio>
 #include "types.h"
+#include "texture.h"
 #include "math_utils.h"
 #include "color.h"
 #include "ray.h"
