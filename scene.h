@@ -27,7 +27,7 @@ struct PBMaterial {
 static const PBMaterial PBM_ROUGH_RED = {
         {1, 0, 0, 1},
         0,
-        0.8,
+        1,
         1
 };
 
@@ -48,7 +48,7 @@ static const PBMaterial PBM_SMOOTH_BLUE = {
 static const PBMaterial PBM_GRAY = {
         {0.5, 0.5, 0.5, 1},
         0,
-        0.4,
+        0.8,
         1
 };
 
@@ -191,10 +191,10 @@ Color calculateSurfaceColorFromLightPBR(Vector3D viewPosition, Vector3D surfaceP
     Vector3D L = (light.position - surfacePosition).normalized();
     Vector3D H = (V + L).normalized();
     f32 distance    = (light.position - surfacePosition).length();
-    f32 attenuation = 1.0 / (distance * distance); //todo: hardcoded attenuation
+    f32 attenuation = 1.0 / (distance * distance); //todo: different attenuation
 
     Color lightColor = light.color;
-    Color radiance     = lightColor; //white * attenuation; //todo: hardcoded light color
+    Color radiance     = lightColor;
 
     // cook-torrance brdf
     f32 NDF = DistributionGGX(N, H, surface.roughness);
@@ -283,6 +283,8 @@ SceneIntersectReport intersectScene(Ray ray, Scene scene) {
  * Trace a ray through a scene. Returns the color at the intersection point.
  */
 Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
+    if(traceDepth == 0) return {0,0,0,1};
+
     SceneIntersectReport sceneIntersect = intersectScene(ray, scene);
 
     // Did not hit anything, so we can return the background color
@@ -308,7 +310,19 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
             //surfaceColor = surfaceColor + (scene.lights[i].ambientIntensity * sceneIntersect.hitMaterial.color);
             surfaceColor = ambientTerm;
         } else {
+            Ray reflectionRay = {};
+            reflectionRay.start = sceneIntersect.hit.hitPosition;
+            reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);
+
+            Color reflectionColor = traceThroughScene(reflectionRay, scene, traceDepth - 1);
+
+            PointLight fakeLight = {};
+            fakeLight.color = reflectionColor;
+            fakeLight.position = reflectionRay.start + reflectionRay.direction * 2;
+
             surfaceColor = surfaceColor + calculateSurfaceColorFromLightPBR(ray.start, sceneIntersect.hit.hitPosition, sceneIntersect.hitMaterial, scene.lights[i], sceneIntersect.hit.hitNormal);
+            surfaceColor = surfaceColor + calculateSurfaceColorFromLightPBR(ray.start, sceneIntersect.hit.hitPosition, sceneIntersect.hitMaterial, fakeLight, sceneIntersect.hit.hitNormal);
+
             surfaceColor = surfaceColor + ambientTerm;
         }
     }

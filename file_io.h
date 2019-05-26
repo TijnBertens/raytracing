@@ -92,5 +92,30 @@ bool saveOutBitmap(Bitmap bitmap, const char *filePath) {
     }
 }
 
+/**
+ * Reads in a bitmap from a specified file path.
+ */
+bool readInBitmap(Bitmap *bitmap, const char *filePath) {
+    FILE *inFile = fopen(filePath, "rb");
+
+    if(inFile) {
+        // Read bitmap header
+        fread(&bitmap->header, 1, sizeof(BitmapHeader), inFile);
+
+        // Allocate space for pixel data
+        bitmap->data = (IntColor *) malloc(bitmap->header.dataSize);
+
+        // Move to start of pixel data and read
+        fseek(inFile, bitmap->header.dataOffset, SEEK_SET);
+        fread(bitmap->data, 1, bitmap->header.dataSize, inFile);
+
+        fclose(inFile);
+        return true;
+    } else {
+        printf("Failed to read bitmap file, could not open file.");
+        return false;
+    }
+}
+
 
 #endif //RAYTRACING_FILE_IO_H
