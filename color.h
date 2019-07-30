@@ -220,6 +220,34 @@ inline Color cmin(Color c, f32 n) {
     return result;
 }
 
+/**
+ * For each component of a color, take the max between that component and n.
+ */
+inline Color cmax(Color c, Color n) {
+    Color result = {};
+
+    result.r = fmax(c.r, n.r);
+    result.g = fmax(c.g, n.g);
+    result.b = fmax(c.b, n.b);
+    result.a = fmax(c.a, n.a);
+
+    return result;
+}
+
+/**
+ * For each component of a color, take the min between that component and n.
+ */
+inline Color cmin(Color c, Color n) {
+    Color result = {};
+
+    result.r = fmin(c.r, n.r);
+    result.g = fmin(c.g, n.g);
+    result.b = fmin(c.b, n.b);
+    result.a = fmin(c.a, n.a);
+
+    return result;
+}
+
 //----------------------
 //------IntColor--------
 //----------------------

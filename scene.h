@@ -139,10 +139,17 @@ Vector3D pixelToWorldSpace(Camera camera, u32 x, u32 y, u32 width, u32 height) {
  * Credits to:
  * https://learnopengl.com/PBR/Lighting
  */
-Color fresnelSchlick(float cosTheta, Color F0)
+Color fresnelSchlick(f32 cosTheta, Color F0)
 {
     Color one = {1, 1, 1, 1};
     return F0 + (one - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+Color fresnelSchlickRoughness(float cosTheta, Color F0, f32 roughness)
+{
+    f32 invR = 1.0f - roughness;
+    Color invRc = {invR, invR, invR, invR};
+    return F0 + (cmax(invRc, F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 float DistributionGGX(Vector3D N, Vector3D H, f32 roughness)
@@ -179,35 +186,37 @@ f32 GeometrySmith(Vector3D N, Vector3D V, Vector3D L, f32 roughness)
     return ggx1 * ggx2;
 }
 
-Color calculateSurfaceColorFromLightPBR(Vector3D viewPosition, Vector3D surfacePosition, PBMaterial surface, PointLight light, Vector3D normal) {
-
-    Vector3D V = (viewPosition - surfacePosition).normalized();
-    Vector3D N = normal;
+/**
+ * Evaluates the radiance at a surface point for a single incoming light direction.
+ * All input directions must be normalized!
+ */
+Color calculateRadiancePBR(Vector3D surfaceNormal, PBMaterial surface, Vector3D viewDirection, Vector3D lightDirection, Color lightRadiance) {
+    Vector3D V = viewDirection;
+    Vector3D N = surfaceNormal;
 
     Color F0 = {0.3, 0.3, 0.3, 1};
     F0 = mix(F0, surface.albedo, surface.metallic);
 
     // calculate per-light radiance
-    Vector3D L = (light.position - surfacePosition).normalized();
+    Vector3D L = lightDirection;
     Vector3D H = (V + L).normalized();
-    f32 distance    = (light.position - surfacePosition).length();
-    f32 attenuation = 1.0 / (distance * distance); //todo: different attenuation
+    //f32 distance    = (light.position - surfacePosition).length();
+    //f32 attenuation = 1.0 / (distance * distance); //todo: different attenuation
 
-    Color lightColor = light.color;
-    Color radiance     = lightColor;
+    Color radiance = lightRadiance;
 
     // cook-torrance brdf
     f32 NDF = DistributionGGX(N, H, surface.roughness);
-    f32 G   = GeometrySmith(N, V, L, surface.roughness);
-    Color F    = fresnelSchlick(fmax(H.dot(V), 0.0), F0);
+    f32 G = GeometrySmith(N, V, L, surface.roughness);
+    Color F = fresnelSchlickRoughness(fmax(H.dot(V), 0.0), F0, surface.roughness);
 
     Color kS = F;
     Color kD = {1 - kS.r, 1 - kS.g, 1 - kS.b, 1}; //todo: what about alpha here?  //vec3(1.0) - kS; // here
     kD = kD * (1.0 - surface.metallic);
 
-    Color numerator    = NDF * G * F;
+    Color numerator = NDF * G * F;
     f32 denominator = 4.0 * fmax(N.dot(V), 0.0) * fmax(N.dot(L), 0.0);
-    Color specular     = numerator / fmax(denominator, 0.001);
+    Color specular = numerator / fmax(denominator, 0.001);
 
     // add to outgoing radiance Lo
     f32 NdotL = fmax(N.dot(L), 0.0);
@@ -307,22 +316,12 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
         Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
 
         if(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length()) {
-            //surfaceColor = surfaceColor + (scene.lights[i].ambientIntensity * sceneIntersect.hitMaterial.color);
-            surfaceColor = ambientTerm;
+            surfaceColor = surfaceColor + ambientTerm;
         } else {
-            Ray reflectionRay = {};
-            reflectionRay.start = sceneIntersect.hit.hitPosition;
-            reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);
+            Vector3D viewDirection = (ray.start - sceneIntersect.hit.hitPosition).normalized();
+            Vector3D lightDirection = (scene.lights[i].position - sceneIntersect.hit.hitPosition).normalized();
 
-            Color reflectionColor = traceThroughScene(reflectionRay, scene, traceDepth - 1);
-
-            PointLight fakeLight = {};
-            fakeLight.color = reflectionColor;
-            fakeLight.position = reflectionRay.start + reflectionRay.direction * 2;
-
-            surfaceColor = surfaceColor + calculateSurfaceColorFromLightPBR(ray.start, sceneIntersect.hit.hitPosition, sceneIntersect.hitMaterial, scene.lights[i], sceneIntersect.hit.hitNormal);
-            surfaceColor = surfaceColor + calculateSurfaceColorFromLightPBR(ray.start, sceneIntersect.hit.hitPosition, sceneIntersect.hitMaterial, fakeLight, sceneIntersect.hit.hitNormal);
-
+            surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, lightDirection, scene.lights[i].color);
             surfaceColor = surfaceColor + ambientTerm;
         }
     }
