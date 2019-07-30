@@ -290,9 +290,10 @@ SceneIntersectReport intersectScene(Ray ray, Scene scene) {
 
 /**
  * Trace a ray through a scene. Returns the color at the intersection point.
+ * @param traceDepth How many levels of recursive reflections will be sampled.
  */
 Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
-    if(traceDepth == 0) return {0,0,0,1};
+    if(traceDepth == 0) return scene.backgroundColor;
 
     SceneIntersectReport sceneIntersect = intersectScene(ray, scene);
 
@@ -302,6 +303,10 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
     }
 
     Color surfaceColor = {0, 0, 0, 1};
+    Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
+    Vector3D viewDirection = (ray.start - sceneIntersect.hit.hitPosition).normalized();
+
+    // Apply lighting
     for(u32 i = 0; i < scene.numLights; i++) {
         Vector3D hitToLight = (scene.lights[i].position - sceneIntersect.hit.hitPosition);
 
@@ -311,22 +316,22 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
 
         SceneIntersectReport shadowTrace = intersectScene(shadowRay, scene);
 
-        // improvised ambient term
-        //Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
-        Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
-
-        if(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length()) {
-            surfaceColor = surfaceColor + ambientTerm;
-        } else {
-            Vector3D viewDirection = (ray.start - sceneIntersect.hit.hitPosition).normalized();
+        if(!(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length())) {
             Vector3D lightDirection = (scene.lights[i].position - sceneIntersect.hit.hitPosition).normalized();
-
             surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, lightDirection, scene.lights[i].color);
-            surfaceColor = surfaceColor + ambientTerm;
         }
     }
 
-    //todo: reflection and refraction
+    //reflection
+    Ray reflectionRay = {};
+    reflectionRay.start = sceneIntersect.hit.hitPosition;
+    reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);
+    Color reflectionColor = traceThroughScene(reflectionRay, scene, traceDepth - 1);
+
+    surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, reflectionRay.direction, reflectionColor);
+    surfaceColor = surfaceColor + ambientTerm;
+
+    //todo: refraction
     surfaceColor.a = 1; //todo: handle alpha
     return surfaceColor;
 }
