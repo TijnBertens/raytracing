@@ -5,53 +5,12 @@
 #ifndef RAYTRACING_SCENE_H
 #define RAYTRACING_SCENE_H
 
+#include <random>
 #include "math_utils.h"
 #include "color.h"
 #include "geometries.h"
 #include "ray.h"
-
-//  ----------------------
-// Physically based material
-//  ----------------------
-
-/**
- * Physically based material.
- */
-struct PBMaterial {
-    Color albedo;
-    f32 metallic;
-    f32 roughness;
-    f32 ao;
-};
-
-static const PBMaterial PBM_ROUGH_RED = {
-        {1, 0, 0, 1},
-        0,
-        1,
-        1
-};
-
-static const PBMaterial PBM_METALLIC_GREEN = {
-        {0, 1, 0, 1},
-        1,
-        0.2,
-        1
-};
-
-static const PBMaterial PBM_SMOOTH_BLUE = {
-        {0, 0, 1, 1},
-        0,
-        0.1,
-        1
-};
-
-static const PBMaterial PBM_GRAY = {
-        {0.5, 0.5, 0.5, 1},
-        0,
-        0.8,
-        1
-};
-
+#include "material.h"
 
 //  ----------------------
 //      Scene objects
@@ -126,6 +85,48 @@ Vector3D pixelToWorldSpace(Camera camera, u32 x, u32 y, u32 width, u32 height) {
 
     Vector3D result =
             botLeft + (u * (botRight - botLeft)) + (v * (topLeft - botLeft));
+
+    return result;
+}
+
+Vector3D pixelToWorldSpaceRand(Camera camera, u32 x, u32 y, u32 width, u32 height) {
+    Vector3D screenCenter = camera.position + (camera.viewDirection * camera.nearClippingDistance);
+
+    Vector3D screenVerticalDirection = camera.upVector;
+    Vector3D screenHorizontalDirection = camera.upVector.cross(camera.viewDirection).normalized();
+
+    f32 screenHeight = 2 * (f32) tan((camera.fovy / 2.0) * PI_32 / 180.0) * camera.nearClippingDistance;
+    f32 screenWidth =  screenHeight * camera.aspectRatio;
+
+    Vector3D botLeft =
+            screenCenter
+            - ((screenWidth / 2) * screenHorizontalDirection)
+            - ((screenHeight / 2) * screenVerticalDirection);
+
+    Vector3D botRight =
+            screenCenter
+            + ((screenWidth / 2) * screenHorizontalDirection)
+            - ((screenHeight / 2) * screenVerticalDirection);
+
+    Vector3D topLeft =
+            screenCenter
+            - ((screenWidth / 2) * screenHorizontalDirection)
+            + ((screenHeight / 2) * screenVerticalDirection);
+
+    f32 u = (f32) x / (f32) width;
+    f32 v = (f32) y / (f32) height;
+
+    Vector3D result =
+            botLeft + (u * (botRight - botLeft)) + (v * (topLeft - botLeft));
+
+    f32 r1 = (float) rand() / RAND_MAX;
+    f32 r2 = (float) rand() / RAND_MAX;
+
+    f32 pixWidth = screenWidth / width;
+    f32 pixHeight = screenHeight / height;
+
+    result = result + r1 * pixWidth * screenHorizontalDirection;
+    result = result + r2 * pixHeight * screenVerticalDirection;
 
     return result;
 }
@@ -218,7 +219,7 @@ Color calculateRadiancePBR(Vector3D surfaceNormal, PBMaterial surface, Vector3D 
     f32 denominator = 4.0 * fmax(N.dot(V), 0.0) * fmax(N.dot(L), 0.0);
     Color specular = numerator / fmax(denominator, 0.001);
 
-    // add to outgoing radiance Lo
+    // return outgoing radiance
     f32 NdotL = fmax(N.dot(L), 0.0);
     return (kD * surface.albedo / PI_32 + specular) * radiance * NdotL;
 }
@@ -323,12 +324,16 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
     }
 
     //reflection
-    Ray reflectionRay = {};
-    reflectionRay.start = sceneIntersect.hit.hitPosition;
-    reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);
-    Color reflectionColor = traceThroughScene(reflectionRay, scene, traceDepth - 1);
 
-    surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, reflectionRay.direction, reflectionColor);
+    if(sceneIntersect.hitMaterial.roughness < 0.8f) {
+        Ray reflectionRay = {};
+        reflectionRay.start = sceneIntersect.hit.hitPosition;
+        reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);
+        Color reflectionColor = traceThroughScene(reflectionRay, scene, traceDepth - 1);
+
+        surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, reflectionRay.direction, reflectionColor);
+    }
+
     surfaceColor = surfaceColor + ambientTerm;
 
     //todo: refraction

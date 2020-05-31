@@ -1,7 +1,6 @@
 #include <malloc.h>
-#include <cstdio>
+#include <random>
 #include "types.h"
-#include "texture.h"
 #include "math_utils.h"
 #include "color.h"
 #include "ray.h"
@@ -10,8 +9,10 @@
 
 
 int main() {
-    u32 width = 1920*2;
-    u32 height = 1080*2;
+    srand(NULL);
+
+    u32 width = 1920;
+    u32 height = 1080;
 
     Color *pixels = (Color *) malloc(sizeof(Color) * width *  height);
 
@@ -87,66 +88,41 @@ int main() {
 
     for(u32 y = 0; y < height; y++) {
         for(u32 x = 0; x < width; x++) {
+            const u32 SAMPLES = 15;
 
-            Vector3D wPixel = pixelToWorldSpace(camera, x, y, width, height);
+            pixels[x + y * width] = {0, 0, 0, 0};
+            for(u32 i = 0; i < SAMPLES; i++) {
+                Vector3D wPixel = pixelToWorldSpaceRand(camera, x, y, width, height);
 
-            Vector3D rayP = wPixel;
-            Vector3D rayD = (wPixel - camera.position).normalized();
+                Vector3D rayP = wPixel;
+                Vector3D rayD = (wPixel - camera.position).normalized();
 
-            Ray ray = {};
-            ray.start = rayP;
-            ray.direction = rayD;
+                Ray ray = {};
+                ray.start = rayP;
+                ray.direction = rayD;
 
-            pixels[x + y * width] = traceThroughScene(ray, scene);
+                pixels[x + y * width] = pixels[x + y * width] + (1.0 / SAMPLES) * traceThroughScene(ray, scene);
+            }
         }
     }
 
-    // Make shift anti-aliasing
+    // tone mapping and gamma correction
 
+    for(u32 y = 0; y < height; y++) {
+        for(u32 x = 0; x < width; x++) {
+//            pixels[x + y * width].r = pixels[x + y * width].r / (pixels[x + y * width].r + 1);
+//            pixels[x + y * width].g = pixels[x + y * width].g / (pixels[x + y * width].g + 1);
+//            pixels[x + y * width].b = pixels[x + y * width].b / (pixels[x + y * width].b + 1);
 
-    u32 halfWidth = width / 2;
-    u32 halfHeight = height / 2;
-
-    Color *aaPixels = (Color *) malloc(sizeof(Color) * halfWidth * halfHeight);
-
-    for(u32 xx = 0; xx < halfWidth; xx++) {
-        for(u32 yy = 0; yy < halfHeight; yy++) {
-            u32 x = 2*xx;
-            u32 y = 2*yy;
-
-            f32 r, g, b, a;
-
-            r = pixels[x + y * width].r
-                    +pixels[(x+1) + y * width].r
-                    +pixels[x + (y+1) * width].r
-                    +pixels[(x+1) + (y+1) * width].r;
-
-            g = pixels[x + y * width].g
-                +pixels[(x+1) + y * width].g
-                +pixels[x + (y+1) * width].g
-                +pixels[(x+1) + (y+1) * width].g;
-
-            b = pixels[x + y * width].b
-                +pixels[(x+1) + y * width].b
-                +pixels[x + (y+1) * width].b
-                +pixels[(x+1) + (y+1) * width].b;
-
-            a = pixels[x + y * width].a
-                +pixels[(x+1) + y * width].a
-                +pixels[x + (y+1) * width].a
-                +pixels[(x+1) + (y+1) * width].a;
-
-            aaPixels[xx + yy * halfWidth].r = r /4;
-            aaPixels[xx + yy * halfWidth].g = g /4;
-            aaPixels[xx + yy * halfWidth].b = b /4;
-            aaPixels[xx + yy * halfWidth].a = a /4;
+            pixels[x + y * width].r = powf(pixels[x + y * width].r, 1.0f/2.2f);
+            pixels[x + y * width].g = powf(pixels[x + y * width].g, 1.0f/2.2f);
+            pixels[x + y * width].b = powf(pixels[x + y * width].b, 1.0f/2.2f);
         }
     }
 
     // Convert color format to that of BMP
 
     IntColor *bmpPixels = (IntColor *) malloc(sizeof(IntColor) * width * height);
-    IntColor *bmpAaPixels = (IntColor *) malloc(sizeof(IntColor) * halfWidth * halfHeight);
 
     for(u32 y = 0; y < height; y++) {
         for (u32 x = 0; x < width; x++) {
@@ -154,22 +130,11 @@ int main() {
         }
     }
 
-    for (u32 y = 0; y < halfHeight; y++) {
-        for(u32 x = 0; x < halfWidth; x++) {
-            bmpAaPixels[x + y * halfWidth] = toIntColor(aaPixels[x + y * halfWidth]);
-        }
-    }
-
 
     saveOutBitmap(createBitmap(bmpPixels, width, height), "P:/raytracing/res/reaytracing_test.bmp");
-    saveOutBitmap(createBitmap(bmpAaPixels, halfWidth, halfHeight), "P:/raytracing/res/aa_raytracing_test.bmp");
 
     free(pixels);
-    free(aaPixels);
-
     free(bmpPixels);
-    free(bmpAaPixels);
-
 
     return 0;
 }
