@@ -10,16 +10,16 @@
  * 3D triangle, defined by three points
  */
 struct Triangle {
-    Vector3D A;
-    Vector3D B;
-    Vector3D C;
+    Vec3f A;
+    Vec3f B;
+    Vec3f C;
 };
 
 /**
  * 3D sphere, defined by center and radius
  */
 struct Sphere {
-    Vector3D position;      // center
+    Vec3f position;      // center
     f32 radius;
 };
 

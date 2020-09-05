@@ -14,7 +14,7 @@
 
 #define PI_32 3.14159265359
 
-struct Vector2D {
+struct Vect3f {
     union {
         struct {
             f32 x;
@@ -24,13 +24,13 @@ struct Vector2D {
     };
 
 public:
-    inline f32 dot(Vector2D b);
+    inline f32 dot(Vect3f b);
     inline f32 length();
 
-    inline Vector2D normalized();
+    inline Vect3f normalized();
 };
 
-struct Vector3D {
+struct Vec3f {
     union {
         struct {
             f32 x;
@@ -41,16 +41,16 @@ struct Vector3D {
     };
 
 public:
-    inline f32 dot(Vector3D b);
+    inline f32 dot(Vec3f b);
     inline f32 length();
     inline f32 lengthSq();
 
-    inline Vector3D cross(Vector3D b);
-    inline Vector3D normalized();
-    inline Vector3D reflectIn(Vector3D b);
+    inline Vec3f cross(Vec3f b);
+    inline Vec3f normalized();
+    inline Vec3f reflectIn(Vec3f b);
 };
 
-struct Vector4D {
+struct Vec4f {
     union {
         struct {
             f32 x;
@@ -62,10 +62,10 @@ struct Vector4D {
     };
 
 public:
-    inline f32 dot(Vector4D b);
+    inline f32 dot(Vec4f b);
     inline f32 length();
 
-    inline Vector4D normalized();
+    inline Vec4f normalized();
 };
 
 struct Matrix4x4 {
@@ -98,8 +98,8 @@ struct Matrix4x4 {
 public:
     inline Matrix4x4 transpose();
 
-    inline static Matrix4x4 scale(Vector3D s);
-    inline static Matrix4x4 translation(Vector3D t);
+    inline static Matrix4x4 scale(Vec3f s);
+    inline static Matrix4x4 translation(Vec3f t);
     static Matrix4x4 perspective(f32 aspectRatio, f32 fovy, f32 zNear, f32 zFar);
 };
 
@@ -111,14 +111,14 @@ struct Quaternion {
             f32 y;
             f32 z;
         };
-        Vector3D v;
+        Vec3f v;
     };
 
 public:
     inline Quaternion inverse();
-    inline Vector3D rotateVector(Vector3D);
+    inline Vec3f rotateVector(Vec3f);
 
-    inline static Quaternion rotation(f32 angle, Vector3D axis);
+    inline static Quaternion rotation(f32 angle, Vec3f axis);
     inline static Quaternion slerp(Quaternion start, Quaternion end, f32 t);
 };
 
@@ -132,17 +132,17 @@ public:
  * Methods
  */
 
-inline f32 Vector2D::dot(Vector2D b) {
+inline f32 Vect3f::dot(Vect3f b) {
     return x*b.x + y*b.y;
 }
 
 
-inline f32 Vector2D::length() {
+inline f32 Vect3f::length() {
     return sqrt(x*x + y*y);
 }
 
-inline Vector2D Vector2D::normalized() {
-    Vector2D result = {};
+inline Vect3f Vect3f::normalized() {
+    Vect3f result = {};
 
     f32 length = this->length();
     result.x = this->x / length;
@@ -155,8 +155,8 @@ inline Vector2D Vector2D::normalized() {
  * OPERATORS
  */
 
-inline Vector2D operator+(Vector2D a, Vector2D b) {
-    Vector2D result = {};
+inline Vect3f operator+(Vect3f a, Vect3f b) {
+    Vect3f result = {};
 
     result.x = a.x + b.x;
     result.y = a.y + b.y;
@@ -164,8 +164,8 @@ inline Vector2D operator+(Vector2D a, Vector2D b) {
     return result;
 }
 
-inline Vector2D operator-(Vector2D a, Vector2D b) {
-    Vector2D result = {};
+inline Vect3f operator-(Vect3f a, Vect3f b) {
+    Vect3f result = {};
 
     result.x = a.x - b.x;
     result.y = a.y - b.y;
@@ -173,8 +173,8 @@ inline Vector2D operator-(Vector2D a, Vector2D b) {
     return result;
 }
 
-inline Vector2D operator-(Vector2D a) {
-    Vector2D result = {};
+inline Vect3f operator-(Vect3f a) {
+    Vect3f result = {};
 
     result.x = - a.x;
     result.y = - a.y;
@@ -182,8 +182,8 @@ inline Vector2D operator-(Vector2D a) {
     return result;
 }
 
-inline Vector2D operator*(f32 f, Vector2D v) {
-    Vector2D result = {};
+inline Vect3f operator*(f32 f, Vect3f v) {
+    Vect3f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -191,8 +191,8 @@ inline Vector2D operator*(f32 f, Vector2D v) {
     return result;
 }
 
-inline Vector2D operator*(Vector2D v, f32 f) {
-    Vector2D result = {};
+inline Vect3f operator*(Vect3f v, f32 f) {
+    Vect3f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -200,8 +200,8 @@ inline Vector2D operator*(Vector2D v, f32 f) {
     return result;
 }
 
-inline Vector2D operator/(f32 f, Vector2D v) {
-    Vector2D result = {};
+inline Vect3f operator/(f32 f, Vect3f v) {
+    Vect3f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -209,8 +209,8 @@ inline Vector2D operator/(f32 f, Vector2D v) {
     return result;
 }
 
-inline Vector2D operator/(Vector2D v, f32 f) {
-    Vector2D result = {};
+inline Vect3f operator/(Vect3f v, f32 f) {
+    Vect3f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -228,8 +228,8 @@ inline Vector2D operator/(Vector2D v, f32 f) {
  * OPERATORS
  */
 
-inline Vector3D operator+(Vector3D a, Vector3D b) {
-    Vector3D result = {};
+inline Vec3f operator+(Vec3f a, Vec3f b) {
+    Vec3f result = {};
 
     result.x = a.x + b.x;
     result.y = a.y + b.y;
@@ -238,8 +238,8 @@ inline Vector3D operator+(Vector3D a, Vector3D b) {
     return result;
 }
 
-inline Vector3D operator-(Vector3D a, Vector3D b) {
-    Vector3D result = {};
+inline Vec3f operator-(Vec3f a, Vec3f b) {
+    Vec3f result = {};
 
     result.x = a.x - b.x;
     result.y = a.y - b.y;
@@ -248,8 +248,8 @@ inline Vector3D operator-(Vector3D a, Vector3D b) {
     return result;
 }
 
-inline Vector3D operator-(Vector3D a) {
-    Vector3D result = {};
+inline Vec3f operator-(Vec3f a) {
+    Vec3f result = {};
 
     result.x = - a.x;
     result.y = - a.y;
@@ -258,8 +258,8 @@ inline Vector3D operator-(Vector3D a) {
     return result;
 }
 
-inline Vector3D operator*(f32 f, Vector3D v) {
-    Vector3D result = {};
+inline Vec3f operator*(f32 f, Vec3f v) {
+    Vec3f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -268,8 +268,8 @@ inline Vector3D operator*(f32 f, Vector3D v) {
     return result;
 }
 
-inline Vector3D operator*(Vector3D v, f32 f) {
-    Vector3D result = {};
+inline Vec3f operator*(Vec3f v, f32 f) {
+    Vec3f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -278,8 +278,8 @@ inline Vector3D operator*(Vector3D v, f32 f) {
     return result;
 }
 
-inline Vector3D operator/(f32 f, Vector3D v) {
-    Vector3D result = {};
+inline Vec3f operator/(f32 f, Vec3f v) {
+    Vec3f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -288,8 +288,8 @@ inline Vector3D operator/(f32 f, Vector3D v) {
     return result;
 }
 
-inline Vector3D operator/(Vector3D v, f32 f) {
-    Vector3D result = {};
+inline Vec3f operator/(Vec3f v, f32 f) {
+    Vec3f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -302,12 +302,12 @@ inline Vector3D operator/(Vector3D v, f32 f) {
  * Methods
  */
 
-inline f32 Vector3D::dot(Vector3D b) {
+inline f32 Vec3f::dot(Vec3f b) {
     return x*b.x + y*b.y + z*b.z;
 }
 
-inline Vector3D Vector3D::cross(Vector3D b) {
-    Vector3D result = {};
+inline Vec3f Vec3f::cross(Vec3f b) {
+    Vec3f result = {};
 
     result.x = y*b.z - z*b.y;
     result.y = z*b.x - x*b.z;
@@ -316,16 +316,16 @@ inline Vector3D Vector3D::cross(Vector3D b) {
     return result;
 }
 
-inline f32 Vector3D::length() {
+inline f32 Vec3f::length() {
     return sqrt(x*x + y*y + z*z);
 }
 
-inline f32 Vector3D::lengthSq() {
+inline f32 Vec3f::lengthSq() {
     return x*x + y*y + z*z;
 }
 
-inline Vector3D Vector3D::normalized() {
-    Vector3D result = {};
+inline Vec3f Vec3f::normalized() {
+    Vec3f result = {};
 
     f32 length = this->length();
     result.x = this->x / length;
@@ -335,8 +335,8 @@ inline Vector3D Vector3D::normalized() {
     return result;
 }
 
-inline Vector3D Vector3D::reflectIn(Vector3D b) {
-    Vector3D result = {};
+inline Vec3f Vec3f::reflectIn(Vec3f b) {
+    Vec3f result = {};
 
     result = *this - 2.0f*(this->dot(b))*b;
 
@@ -353,16 +353,16 @@ inline Vector3D Vector3D::reflectIn(Vector3D b) {
  * Methods
  */
 
-inline f32 Vector4D::dot(Vector4D b) {
+inline f32 Vec4f::dot(Vec4f b) {
     return x*b.x + y*b.y + z*b.z + w*b.w;
 }
 
-inline f32 Vector4D::length() {
+inline f32 Vec4f::length() {
     return sqrt(x*x + y*y + z*z + w*w);
 }
 
-inline Vector4D Vector4D::normalized() {
-    Vector4D result = {};
+inline Vec4f Vec4f::normalized() {
+    Vec4f result = {};
 
     f32 length = this->length();
     result.x = this->x / length;
@@ -377,8 +377,8 @@ inline Vector4D Vector4D::normalized() {
  * OPERATORS
  */
 
-inline Vector4D operator+(Vector4D a, Vector4D b) {
-    Vector4D result = {};
+inline Vec4f operator+(Vec4f a, Vec4f b) {
+    Vec4f result = {};
 
     result.x = a.x + b.x;
     result.y = a.y + b.y;
@@ -388,8 +388,8 @@ inline Vector4D operator+(Vector4D a, Vector4D b) {
     return result;
 }
 
-inline Vector4D operator-(Vector4D a, Vector4D b) {
-    Vector4D result = {};
+inline Vec4f operator-(Vec4f a, Vec4f b) {
+    Vec4f result = {};
 
     result.x = a.x - b.x;
     result.y = a.y - b.y;
@@ -399,8 +399,8 @@ inline Vector4D operator-(Vector4D a, Vector4D b) {
     return result;
 }
 
-inline Vector4D operator-(Vector4D a) {
-    Vector4D result = {};
+inline Vec4f operator-(Vec4f a) {
+    Vec4f result = {};
 
     result.x = -a.x;
     result.y = -a.y;
@@ -410,8 +410,8 @@ inline Vector4D operator-(Vector4D a) {
     return result;
 }
 
-inline Vector4D operator*(f32 f, Vector4D v) {
-    Vector4D result = {};
+inline Vec4f operator*(f32 f, Vec4f v) {
+    Vec4f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -421,8 +421,8 @@ inline Vector4D operator*(f32 f, Vector4D v) {
     return result;
 }
 
-inline Vector4D operator*(Vector4D v, f32 f) {
-    Vector4D result = {};
+inline Vec4f operator*(Vec4f v, f32 f) {
+    Vec4f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -432,8 +432,8 @@ inline Vector4D operator*(Vector4D v, f32 f) {
     return result;
 }
 
-inline Vector4D operator/(f32 f, Vector4D v) {
-    Vector4D result = {};
+inline Vec4f operator/(f32 f, Vec4f v) {
+    Vec4f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -443,8 +443,8 @@ inline Vector4D operator/(f32 f, Vector4D v) {
     return result;
 }
 
-inline Vector4D operator/(Vector4D v, f32 f) {
-    Vector4D result = {};
+inline Vec4f operator/(Vec4f v, f32 f) {
+    Vec4f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -474,7 +474,7 @@ inline Matrix4x4 Matrix4x4::transpose() {
     return result;
 }
 
-inline Matrix4x4 Matrix4x4::scale(Vector3D s) {
+inline Matrix4x4 Matrix4x4::scale(Vec3f s) {
     f32 a = s.x;
     f32 b = s.y;
     f32 c = s.z;
@@ -488,7 +488,7 @@ inline Matrix4x4 Matrix4x4::scale(Vector3D s) {
     return result;
 }
 
-inline Matrix4x4 Matrix4x4::translation(Vector3D t) {
+inline Matrix4x4 Matrix4x4::translation(Vec3f t) {
     f32 x = t.x;
     f32 y = t.y;
     f32 z = t.z;
@@ -591,7 +591,7 @@ inline Quaternion Quaternion::inverse() {
     return result;
 }
 
-inline Vector3D Quaternion::rotateVector(Vector3D vec) {
+inline Vec3f Quaternion::rotateVector(Vec3f vec) {
     Quaternion qv = {};
     qv.w == 0;
     qv.v = vec;
@@ -599,7 +599,7 @@ inline Vector3D Quaternion::rotateVector(Vector3D vec) {
     return (*this * qv * this->inverse()).v;
 }
 
-inline Quaternion Quaternion::rotation(f32 degrees, Vector3D axis) {
+inline Quaternion Quaternion::rotation(f32 degrees, Vec3f axis) {
     Quaternion result = {};
 
     f32 radians = (degrees * PI_32) / 180.0f;

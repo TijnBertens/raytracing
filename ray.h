@@ -15,8 +15,8 @@
  * Representation of a ray as a half line. Starts at start, goes in direction.
  */
 struct Ray {
-    Vector3D start;         // start position
-    Vector3D direction;     // direction of the ray
+    Vec3f start;         // start position
+    Vec3f direction;     // direction of the ray
 };
 
 /**
@@ -26,8 +26,8 @@ struct RayHit {
     bool hit;                   // was there a hit?
 
     f32 TOI;                    // time of intersection
-    Vector3D hitPosition;       // world space position of intersection
-    Vector3D hitNormal;         // world space normal at the hit position//
+    Vec3f hitPosition;          // world space position of intersection
+    Vec3f hitNormal;            // world space normal at the hit position//
 };
 
 
@@ -68,7 +68,7 @@ RayHit intersect(Ray ray, Sphere sphere) {
     result.hit = true;
     result.TOI = t;
 
-    Vector3D hitPosition = ray.start + (t)*ray.direction;
+    Vec3f hitPosition = ray.start + (t) * ray.direction;
 
     result.hitPosition = hitPosition;
     result.hitNormal = (hitPosition - sphere.position).normalized();
@@ -86,7 +86,7 @@ RayHit intersect(Ray ray, Triangle triangle) {
     // N dot (X - P) = 0
 
     // normal of the plain of the triangle
-    Vector3D planeNormal = (triangle.B - triangle.A).cross(triangle.C - triangle.B).normalized();
+    Vec3f planeNormal = (triangle.B - triangle.A).cross(triangle.C - triangle.B).normalized();
 
     // time of intersection
     // t = N dot (P - start) / (N dot direction)
@@ -101,15 +101,15 @@ RayHit intersect(Ray ray, Triangle triangle) {
     // apply correction
     t = t - HIT_EPSILON;
 
-    Vector3D hitPosition = ray.start + t*ray.direction;
+    Vec3f hitPosition = ray.start + t * ray.direction;
 
-    Vector3D normalAB = (triangle.B - triangle.A).cross(planeNormal);
-    Vector3D normalBC = (triangle.C - triangle.B).cross(planeNormal);
-    Vector3D normalCA = (triangle.A - triangle.C).cross(planeNormal);
+    Vec3f normalAB = (triangle.B - triangle.A).cross(planeNormal);
+    Vec3f normalBC = (triangle.C - triangle.B).cross(planeNormal);
+    Vec3f normalCA = (triangle.A - triangle.C).cross(planeNormal);
 
-    Vector3D AH = hitPosition - triangle.A;
-    Vector3D BH = hitPosition - triangle.B;
-    Vector3D CH = hitPosition - triangle.C;
+    Vec3f AH = hitPosition - triangle.A;
+    Vec3f BH = hitPosition - triangle.B;
+    Vec3f CH = hitPosition - triangle.C;
 
     // check if the hitposition is inside the bounds of the triangle
     if(normalAB.dot(AH) <=0

@@ -9,6 +9,11 @@
 #include "math_utils.h"
 #include "color.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+// Have to undefine because this is a single header library in a unity build ...
+#undef TINYOBJLOADER_IMPLEMENTATION
+
 /**
  * It is important that the bitmap header is not padded!
  */
@@ -115,6 +120,36 @@ bool readInBitmap(Bitmap *bitmap, const char *filePath) {
         printf("Failed to read bitmap file, could not open file.");
         return false;
     }
+}
+
+/**
+ * Contents of a .OBJ file.
+ * This particular struct is basically a wrapper for the return values of loadObj from the tiny obj loader library.
+ */
+struct ObjContent {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+};
+
+/**
+ * Reads in an object file from a specified file path.
+ */
+bool readInObj(ObjContent *objContent, const char *file) {
+    std::string warn;
+    std::string err;
+
+    bool ret = tinyobj::LoadObj(&objContent->attrib, &objContent->shapes, &objContent->materials, &warn, &err, file, "../res/objects");
+
+    if(warn.length()) {
+        printf("%s\n", warn.c_str());
+    }
+
+    if(err.length()) {
+        printf("%s\n", err.c_str());
+    }
+
+    return ret;
 }
 
 

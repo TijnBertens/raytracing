@@ -14,7 +14,7 @@
  */
 struct Color {
     union {
-        Vector4D v;
+        Vec4f v;
         struct {
             f32 r;
             f32 g;

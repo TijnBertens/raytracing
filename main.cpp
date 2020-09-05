@@ -92,10 +92,10 @@ int main() {
 
             pixels[x + y * width] = {0, 0, 0, 0};
             for(u32 i = 0; i < SAMPLES; i++) {
-                Vector3D wPixel = pixelToWorldSpaceRand(camera, x, y, width, height);
+                Vec3f wPixel = pixelToWorldSpaceRand(camera, x, y, width, height);
 
-                Vector3D rayP = wPixel;
-                Vector3D rayD = (wPixel - camera.position).normalized();
+                Vec3f rayP = wPixel;
+                Vec3f rayD = (wPixel - camera.position).normalized();
 
                 Ray ray = {};
                 ray.start = rayP;
