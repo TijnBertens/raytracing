@@ -48,6 +48,9 @@ public:
     inline Vec3f cross(Vec3f b);
     inline Vec3f normalized();
     inline Vec3f reflectIn(Vec3f b);
+
+    static inline Vec3f min(Vec3f a, Vec3f b);
+    static inline Vec3f max(Vec3f a, Vec3f b);
 };
 
 struct Vec4f {
@@ -339,6 +342,26 @@ inline Vec3f Vec3f::reflectIn(Vec3f b) {
     Vec3f result = {};
 
     result = *this - 2.0f*(this->dot(b))*b;
+
+    return result;
+}
+
+inline Vec3f Vec3f::min(Vec3f a, Vec3f b) {
+    Vec3f result = {};
+
+    result.x = fminf(a.x, b.x);
+    result.y = fminf(a.y, b.y);
+    result.z = fminf(a.z, b.z);
+
+    return result;
+}
+
+inline Vec3f Vec3f::max(Vec3f a, Vec3f b) {
+    Vec3f result = {};
+
+    result.x = fmaxf(a.x, b.x);
+    result.y = fmaxf(a.y, b.y);
+    result.z = fmaxf(a.z, b.z);
 
     return result;
 }

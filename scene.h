@@ -252,6 +252,59 @@ struct SceneIntersectReport {
     PBMaterial hitMaterial;
 };
 
+RayHit BVHNodeIntersect(const BVH *bvh, const BVH_Node *node, Ray ray) {
+    // TODO: numTriangles should maybe be s32 so we can use -1 as an invalid value rather than 0
+    if(node->numTriangles != 0) {
+        f32 closestTOI = INFINITY;
+        RayHit closestHit = {};
+        closestHit.hit = false;
+
+        for(u32 i = 0; i < node->numTriangles; i++) {
+            u32 idx = i + node->triangleOffset;
+            BVH_Triangle *triangle = &bvh->triangles[bvh->triangleIDs[idx]];
+
+            RayHit hit = intersect(ray, *triangle->triangle);
+            if(hit.hit && hit.TOI < closestTOI) {
+                closestTOI = hit.TOI;
+                closestHit = hit;
+            }
+        }
+
+        return closestHit;
+    } else {
+        f32 closestTOI = INFINITY;
+        RayHit closestHit = {};
+        closestHit.hit = false;
+
+        if(hitCheck(ray, bvh->nodes[node->child1].boundingBox).hit) {
+            RayHit c1 = BVHNodeIntersect(bvh, &bvh->nodes[node->child1], ray);
+
+            if(c1.hit) {
+                closestTOI = c1.TOI;
+                closestHit = c1;
+            }
+        }
+        if(hitCheck(ray, bvh->nodes[node->child2].boundingBox).hit) {
+            RayHit c2 = BVHNodeIntersect(bvh, &bvh->nodes[node->child2], ray);
+
+            if(c2.hit && c2.TOI < closestTOI) {
+                closestHit = c2;
+            }
+        }
+
+        return closestHit;
+    }
+}
+
+SceneIntersectReport intersectBVH(Ray ray, BVH bvh) {
+    SceneIntersectReport result = {};
+
+    result.hit = BVHNodeIntersect(&bvh, &bvh.nodes[0], ray);
+    result.hitMaterial = PBM_ROUGH_RED;                 // TODO: actual material
+
+    return result;
+}
+
 /**
  * Traces a ray through a scene of spheres and triangles.
  * Returns the closest hit (or an empty hit with hit.hit = false if there is no hit) and the color at that point.
@@ -259,7 +312,7 @@ struct SceneIntersectReport {
 SceneIntersectReport intersectScene(Ray ray, Scene scene) {
     SceneIntersectReport result = {};
 
-    f32 closestTOI = FP_INFINITE;
+    f32 closestTOI = INFINITY;
     RayHit closestHit = {};
 
     for(u32 i = 0; i < scene.numSpheres; i++) {
@@ -329,7 +382,7 @@ Color traceThroughScene(Ray ray, Scene scene, u32 traceDepth = 5) {
         Ray reflectionRay = {};
         reflectionRay.start = sceneIntersect.hit.hitPosition;
         reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);
-        Color reflectionColor = traceThroughScene(reflectionRay, scene, traceDepth - 1);
+        Color reflectionColor = traceThroughScene(reflectionRay, scene, bvh, traceDepth - 1);
 
         surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, reflectionRay.direction, reflectionColor);
     }

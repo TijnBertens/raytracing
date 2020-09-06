@@ -8,8 +8,24 @@
 #include "file_io.h"
 
 
+f32 gen() {
+    return (f32) rand() / RAND_MAX;
+}
+
 int main() {
-    srand(NULL);
+    srand(0);
+
+    Triangle t[1000];
+    for(u32 i = 0; i < 1000; i++) {
+        f32 a = gen() * 100;
+        f32 b = gen() * 100;
+        f32 c = gen() * 100;
+        t[i].A = {a + gen() * 4, b + gen() * 4, c + gen() * 4};
+        t[i].B = {a + gen() * 4, b + gen() * 4, c + gen() * 4};
+        t[i].C = {a + gen() * 4, b + gen() * 4, c + gen() * 4};
+    }
+
+    BVH bvh = constructBVH(t, 1000);
 
     u32 width = 1920;
     u32 height = 1080;
