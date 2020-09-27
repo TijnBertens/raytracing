@@ -101,6 +101,8 @@ struct Matrix4x4 {
 public:
     inline Matrix4x4 transpose();
 
+    inline static Matrix4x4 identity();
+
     inline static Matrix4x4 scale(Vec3f s);
     inline static Matrix4x4 translation(Vec3f t);
     static Matrix4x4 perspective(f32 aspectRatio, f32 fovy, f32 zNear, f32 zFar);
@@ -497,6 +499,17 @@ inline Matrix4x4 Matrix4x4::transpose() {
     return result;
 }
 
+inline Matrix4x4 Matrix4x4::identity() {
+    Matrix4x4 result = {
+            {{
+                     { 1, 0, 0, 0},
+                     { 0, 1, 0, 0},
+                     { 0, 0, 1, 0},
+                     { 0, 0, 0, 1}}
+            }};
+    return result;
+}
+
 inline Matrix4x4 Matrix4x4::scale(Vec3f s) {
     f32 a = s.x;
     f32 b = s.y;
@@ -517,9 +530,9 @@ inline Matrix4x4 Matrix4x4::translation(Vec3f t) {
     f32 z = t.z;
     Matrix4x4 result = {
             {{
-                     { 0, 0, 0, 0},
-                     { 0, 0, 0, 0},
-                     { 0, 0, 0, 0},
+                     { 1, 0, 0, 0},
+                     { 0, 1, 0, 0},
+                     { 0, 0, 1, 0},
                      { x, y, z, 1}}
             }};
     return result;
@@ -573,6 +586,16 @@ inline Matrix4x4 operator*(Matrix4x4 A, Matrix4x4 B) {
             for(u8 i = 0; i < 4; i++) {
                 result.val[column][row] += A.val[i][row] * B.val[column][i];
             }
+        }
+    }
+    return result;
+}
+
+inline Vec4f operator*(Matrix4x4 A, Vec4f B) {
+    Vec4f result = {};
+    for(u8 column = 0; column < 4; column++) {
+        for(u8 row = 0; row < 4; row++) {
+            result.values[row] +=  A.val[column][row] * B.values[column];
         }
     }
     return result;
