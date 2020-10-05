@@ -14,7 +14,11 @@
 
 #define PI_32 3.14159265359
 
-struct Vect3f {
+struct Vec2f;
+struct Vec3f;
+struct Vec4f;
+
+struct Vec2f {
     union {
         struct {
             f32 x;
@@ -24,10 +28,10 @@ struct Vect3f {
     };
 
 public:
-    inline f32 dot(Vect3f b);
+    inline f32 dot(Vec2f b);
     inline f32 length();
 
-    inline Vect3f normalized();
+    inline Vec2f normalized();
 };
 
 struct Vec3f {
@@ -51,6 +55,9 @@ public:
 
     static inline Vec3f min(Vec3f a, Vec3f b);
     static inline Vec3f max(Vec3f a, Vec3f b);
+
+    static inline Vec4f toHomogeneous(Vec3f v, bool isDirection);
+    static inline Vec3f fromHomogeneous(Vec4f v);
 };
 
 struct Vec4f {
@@ -105,6 +112,11 @@ public:
 
     inline static Matrix4x4 scale(Vec3f s);
     inline static Matrix4x4 translation(Vec3f t);
+
+    inline static Matrix4x4 rotationX(f32 a);
+    inline static Matrix4x4 rotationY(f32 a);
+    inline static Matrix4x4 rotationZ(f32 a);
+
     static Matrix4x4 perspective(f32 aspectRatio, f32 fovy, f32 zNear, f32 zFar);
 };
 
@@ -137,17 +149,17 @@ public:
  * Methods
  */
 
-inline f32 Vect3f::dot(Vect3f b) {
+inline f32 Vec2f::dot(Vec2f b) {
     return x*b.x + y*b.y;
 }
 
 
-inline f32 Vect3f::length() {
+inline f32 Vec2f::length() {
     return sqrt(x*x + y*y);
 }
 
-inline Vect3f Vect3f::normalized() {
-    Vect3f result = {};
+inline Vec2f Vec2f::normalized() {
+    Vec2f result = {};
 
     f32 length = this->length();
     result.x = this->x / length;
@@ -160,8 +172,8 @@ inline Vect3f Vect3f::normalized() {
  * OPERATORS
  */
 
-inline Vect3f operator+(Vect3f a, Vect3f b) {
-    Vect3f result = {};
+inline Vec2f operator+(Vec2f a, Vec2f b) {
+    Vec2f result = {};
 
     result.x = a.x + b.x;
     result.y = a.y + b.y;
@@ -169,8 +181,8 @@ inline Vect3f operator+(Vect3f a, Vect3f b) {
     return result;
 }
 
-inline Vect3f operator-(Vect3f a, Vect3f b) {
-    Vect3f result = {};
+inline Vec2f operator-(Vec2f a, Vec2f b) {
+    Vec2f result = {};
 
     result.x = a.x - b.x;
     result.y = a.y - b.y;
@@ -178,8 +190,8 @@ inline Vect3f operator-(Vect3f a, Vect3f b) {
     return result;
 }
 
-inline Vect3f operator-(Vect3f a) {
-    Vect3f result = {};
+inline Vec2f operator-(Vec2f a) {
+    Vec2f result = {};
 
     result.x = - a.x;
     result.y = - a.y;
@@ -187,8 +199,8 @@ inline Vect3f operator-(Vect3f a) {
     return result;
 }
 
-inline Vect3f operator*(f32 f, Vect3f v) {
-    Vect3f result = {};
+inline Vec2f operator*(f32 f, Vec2f v) {
+    Vec2f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -196,8 +208,8 @@ inline Vect3f operator*(f32 f, Vect3f v) {
     return result;
 }
 
-inline Vect3f operator*(Vect3f v, f32 f) {
-    Vect3f result = {};
+inline Vec2f operator*(Vec2f v, f32 f) {
+    Vec2f result = {};
 
     result.x = v.x * f;
     result.y = v.y * f;
@@ -205,8 +217,8 @@ inline Vect3f operator*(Vect3f v, f32 f) {
     return result;
 }
 
-inline Vect3f operator/(f32 f, Vect3f v) {
-    Vect3f result = {};
+inline Vec2f operator/(f32 f, Vec2f v) {
+    Vec2f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -214,8 +226,8 @@ inline Vect3f operator/(f32 f, Vect3f v) {
     return result;
 }
 
-inline Vect3f operator/(Vect3f v, f32 f) {
-    Vect3f result = {};
+inline Vec2f operator/(Vec2f v, f32 f) {
+    Vec2f result = {};
 
     result.x = v.x / f;
     result.y = v.y / f;
@@ -365,6 +377,16 @@ inline Vec3f Vec3f::max(Vec3f a, Vec3f b) {
     result.y = fmaxf(a.y, b.y);
     result.z = fmaxf(a.z, b.z);
 
+    return result;
+}
+
+inline Vec4f Vec3f::toHomogeneous(const Vec3f v, const bool isDirection) {
+    Vec4f result = {v.x, v.y, v.z, isDirection ? 0.f : 1.f};
+    return result;
+}
+
+inline Vec3f Vec3f::fromHomogeneous(Vec4f v) {
+    Vec3f result = {v.x, v.y, v.z};
     return result;
 }
 
@@ -534,6 +556,48 @@ inline Matrix4x4 Matrix4x4::translation(Vec3f t) {
                      { 0, 1, 0, 0},
                      { 0, 0, 1, 0},
                      { x, y, z, 1}}
+            }};
+    return result;
+}
+
+inline Matrix4x4 Matrix4x4::rotationX(const f32 a) {
+    f32 rad = a * PI_32 / 180;
+    f32 s = sin(rad);
+    f32 c = cos(rad);
+    Matrix4x4 result = {
+            {{
+                     {1, 0, 0, 0},
+                     {0, c, s, 0},
+                     {0, -s, c, 0},
+                     {0, 0, 0, 1}}
+            }};
+    return result;
+}
+
+inline Matrix4x4 Matrix4x4::rotationY(const f32 a) {
+    f32 rad = a * PI_32 / 180;
+    f32 s = sin(rad);
+    f32 c = cos(rad);
+    Matrix4x4 result = {
+            {{
+                     {c, 0, -s, 0},
+                     {0, 1, 0, 0},
+                     {s, 0, c, 0},
+                     {0, 0, 0, 1}}
+            }};
+    return result;
+}
+
+inline Matrix4x4 Matrix4x4::rotationZ(const f32 a) {
+    f32 rad = a * PI_32 / 180;
+    f32 s = sin(rad);
+    f32 c = cos(rad);
+    Matrix4x4 result = {
+            {{
+                     {c, s, 0, 0},
+                     {-s, c, 0, 0},
+                     {0, 0, 1, 0},
+                     {0, 0, 0, 1}}
             }};
     return result;
 }

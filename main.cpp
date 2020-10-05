@@ -6,6 +6,7 @@
 #include "ray.h"
 #include "scene.h"
 #include "file_io.h"
+#include "ray_tracer.h"
 
 
 f32 gen() {
@@ -14,18 +15,6 @@ f32 gen() {
 
 int main() {
     srand(0);
-
-    Triangle t[1000];
-    for(u32 i = 0; i < 1000; i++) {
-        f32 a = gen() * 100;
-        f32 b = gen() * 100;
-        f32 c = gen() * 100;
-        t[i].A = {a + gen() * 4, b + gen() * 4, c + gen() * 4};
-        t[i].B = {a + gen() * 4, b + gen() * 4, c + gen() * 4};
-        t[i].C = {a + gen() * 4, b + gen() * 4, c + gen() * 4};
-    }
-
-    BVH bvh = constructBVH(t, 1000);
 
     u32 width = 1920;
     u32 height = 1080;
@@ -87,11 +76,33 @@ int main() {
 
 #define numTestLights 2
     PointLight lights[numTestLights] = {};
-    lights[0].position = {-5,3, 5};
+    lights[0].position = {-5,3, 0};
     lights[0].color = {1, 1, 1, 0};
 
-    lights[1].position = {5,5, 4};
+    lights[1].position = {5,5, 0};
     lights[1].color = {1, 1, 1, 0};
+
+
+    Mesh nol, chair, dragon, dScene;
+    //loadMesh(&nol, "../res/objects/nol.obj");
+    //loadMesh(&chair, "../res/objects/chair.obj");
+    //loadMesh(&dragon, "../res/objects/dragon.obj");
+    loadMesh(&dScene, "../res/objects/dragon_scene.obj");
+
+#define numTestModels 1
+    Model models[numTestModels] = {};
+    models[0].mesh = &dScene;
+    models[0].transform = Matrix4x4::identity() * Matrix4x4::scale({1, 1, -1});
+            //Matrix4x4::translation({0, 0, 2})
+            //* Matrix4x4::rotationY(-135)
+            //* Matrix4x4::rotationX(-90)
+            //* Matrix4x4::scale({0.02f, 0.02f, 0.02f});
+
+//    models[1].mesh = &nol;
+//    models[1].transform =
+//            Matrix4x4::translation({0.4, 2, 2})
+//            * Matrix4x4::rotationY(-135)
+//            * Matrix4x4::scale({.5f, .5f, .5f});
 
     Scene scene = {};
     scene.backgroundColor = {0.05f, 0.05f, 0.05f, 1};
@@ -99,10 +110,17 @@ int main() {
     scene.numSpheres = numTestSpheres;
     scene.triangles = triangles;
     scene.numTriangles = numTestTriangles;
+    scene.models = models;
+    scene.numModels = numTestModels;
     scene.lights = lights;
     scene.numLights = numTestLights;
 
+    RayTracer rayTracer = createRayTracer(&scene);
+
     for(u32 y = 0; y < height; y++) {
+
+        printf("Reached pixel line %u.\n", y);
+
         for(u32 x = 0; x < width; x++) {
             const u32 SAMPLES = 15;
 
@@ -117,7 +135,7 @@ int main() {
                 ray.start = rayP;
                 ray.direction = rayD;
 
-                pixels[x + y * width] = pixels[x + y * width] + (1.0 / SAMPLES) * traceThroughScene(ray, scene);
+                pixels[x + y * width] = pixels[x + y * width] + (1.0 / SAMPLES) * traceRay(&rayTracer, ray);
             }
         }
     }
@@ -154,4 +172,5 @@ int main() {
 
     return 0;
 }
+
 

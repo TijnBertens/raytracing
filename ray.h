@@ -150,7 +150,7 @@ RayHit intersect(Ray ray, Triangle triangle) {
  * Adapted from Andrew Woo:
  * https://web.archive.org/web/20090803054252/http://tog.acm.org/resources/GraphicsGems/gems/RayBox.c
  */
-HitCheck hitCheck(Ray ray, BVH_AABB aabb) {
+HitCheck hitCheck(Ray ray, AABB aabb) {
     HitCheck result = {};
 
     bool inside = true;
