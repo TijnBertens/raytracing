@@ -195,6 +195,7 @@ static u32 recursivelyConstruct(BVH *bvh, u32 tBegin, u32 tEnd, BVH_AABB vb, BVH
 
     u32 dominantAxis = 0; // 0 = x, 1 = y, 2 = z
     Vec3f cbSize = {cb.max.x - cb.min.x, cb.max.y - cb.min.y, cb.max.z - cb.min.z};
+
     if(cbSize.x >= cbSize.y && cbSize.x >= cbSize.z) {
         dominantAxis = 0;
     } else if(cbSize.y >= cbSize.x && cbSize.y >= cbSize.z) {
@@ -393,18 +394,33 @@ TriangleObject *buildTriangleList(Scene *scene, u32 *numTriangles) {
     for(u32 i = 0; i < scene->numModels; i++) {
         Mesh *mesh = scene->models[i].mesh;
         for(u32 j = 0; j < mesh->numTriangles; j++) {
-            Vec4f v1 = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+0]], false);
-            Vec4f v2 = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+1]], false);
-            Vec4f v3 = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+2]], false);
+            Vec3f v1 = mesh->vertices[mesh->indices[j*3+0]];
+            Vec3f v2 = mesh->vertices[mesh->indices[j*3+1]];
+            Vec3f v3 = mesh->vertices[mesh->indices[j*3+2]];
 
-            Vec3f v1t = Vec3f::fromHomogeneous(scene->models[i].transform * v1);
-            Vec3f v2t = Vec3f::fromHomogeneous(scene->models[i].transform * v2);
-            Vec3f v3t = Vec3f::fromHomogeneous(scene->models[i].transform * v3);
+            Vec3f min = Vec3f::min(Vec3f::min(v1, v2), v3);
+            Vec3f max = Vec3f::max(Vec3f::max(v1, v2), v3);
+
+            // If two (or more) dimensions of the AABB are 0, then the triangle has no surface area
+            // and won't be rendered.
+            if((min.x == max.x && min.y == max.y) ||
+               (min.x == max.x && min.z == max.z) ||
+               (min.y == max.y && min.z == max.z)) {
+                continue;
+            }
+
+            Vec4f v1h = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+0]], false);
+            Vec4f v2h = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+1]], false);
+            Vec4f v3h = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+2]], false);
+
+            Vec3f v1t = Vec3f::fromHomogeneous(scene->models[i].transform * v1h);
+            Vec3f v2t = Vec3f::fromHomogeneous(scene->models[i].transform * v2h);
+            Vec3f v3t = Vec3f::fromHomogeneous(scene->models[i].transform * v3h);
 
             allTriangles[tIndex].triangle.A = v1t;
             allTriangles[tIndex].triangle.B = v2t;
             allTriangles[tIndex].triangle.C = v3t;
-            allTriangles[tIndex].material = PBM_ROUGH_RED; //TODO: load materials for meshes
+            allTriangles[tIndex].material = PBM_SMOOTH_OFF_WHITE; //TODO: load materials for meshes
 
             tIndex++;
         }
@@ -414,7 +430,10 @@ TriangleObject *buildTriangleList(Scene *scene, u32 *numTriangles) {
         allTriangles[tIndex++] = scene->triangles[i];
     }
 
-    *numTriangles = totalNumTriangles;
+    u32 usedNumberOfTriangles = tIndex;
+    allTriangles = (TriangleObject *) realloc(allTriangles, sizeof(TriangleObject) * usedNumberOfTriangles);
+
+    *numTriangles = tIndex;
     return allTriangles;
 }
 
