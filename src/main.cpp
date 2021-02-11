@@ -83,12 +83,14 @@ int main() {
     lights[0].position = {5, 3, -5};
     lights[0].color = {1, 1, 1, 0};
 
-
+    // Load dummy mesh
 
     Mesh nol;
     printf("loading mesh\n");
     loadMesh(&nol, "../res/objects/nol.obj");
     printf("loaded mesh\n");
+
+    // Set up dummy models
 
 #define numTestModels 1
     Model models[numTestModels] = {};
@@ -97,6 +99,8 @@ int main() {
             Matrix4x4::translation({0.4, 2, 4})
             * Matrix4x4::rotationY(-135)
             * Matrix4x4::scale({.5f, .5f, .5f});
+
+    // Build scene
 
     Scene scene = {};
     scene.backgroundColor = {0.05f, 0.05f, 0.05f, 1};
@@ -109,13 +113,16 @@ int main() {
     scene.lights = lights;
     scene.numLights = numTestLights;
 
+    // Build ray tracer from scene
     RayTracer rayTracer = createRayTracer(&scene);
 
+    // Process all pixels
     for(u32 y = 0; y < height; y++) {
 
         printf("Reached pixel line %u.\n", y);
 
         for(u32 x = 0; x < width; x++) {
+            // Number of samples per pixel
             const u32 SAMPLES = 15;
 
             pixels[x + y * width] = {0, 0, 0, 0};
@@ -134,7 +141,7 @@ int main() {
         }
     }
 
-    // tone mapping and gamma correction
+    // Tone mapping and gamma correction
 
     for(u32 y = 0; y < height; y++) {
         for(u32 x = 0; x < width; x++) {
@@ -158,8 +165,11 @@ int main() {
         }
     }
 
+    // Save bitmap
 
-    saveOutBitmap(createBitmap(bmpPixels, width, height), "P:/raytracing/output/out.bmp");
+    saveOutBitmap(createBitmap(bmpPixels, width, height), "../out/output.bmp");
+
+    // Clean up allocated pixel arrays
 
     free(pixels);
     free(bmpPixels);

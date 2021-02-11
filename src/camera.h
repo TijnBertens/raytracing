@@ -5,6 +5,8 @@
 #ifndef RAYTRACING_CAMERA_H
 #define RAYTRACING_CAMERA_H
 
+#include <random>
+
 #include "types.h"
 #include "math_utils.h"
 
