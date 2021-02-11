@@ -9,7 +9,7 @@
 #include "file_io.h"
 
 /**
- * 3D triangle, defined by three points
+ * 3D triangle, defined by three points.
  */
 struct Triangle {
     Vec3f A;
@@ -18,7 +18,7 @@ struct Triangle {
 };
 
 /**
- * 3D sphere, defined by center and radius
+ * 3D sphere, defined by center and radius.
  */
 struct Sphere {
     Vec3f position;      // center
@@ -79,14 +79,6 @@ bool loadMesh(Mesh *mesh, const char *file) {
         for(const auto &index : shape.mesh.indices) {
             mesh->indices[i++] = index.vertex_index;
         }
-    }
-
-    for(u32 i = 0; i < mesh->numTriangles; i++) {
-        u32 i1 = mesh->indices[i*3+0];
-        u32 i3 = mesh->indices[i*3+2];
-
-        mesh->indices[i*3+0] = i3;
-        mesh->indices[i*3+2] = i1;
     }
 
     return true;

@@ -3,4 +3,6 @@ project(raytracing)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(raytracing main.cpp)
+include_directories(src)
+
+add_executable(raytracing src/main.cpp)

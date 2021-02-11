@@ -8,18 +8,17 @@
 #include "file_io.h"
 #include "ray_tracer.h"
 
-
-f32 gen() {
-    return (f32) rand() / RAND_MAX;
-}
-
 int main() {
+    // Seed the RNG
     srand(0);
 
+    // Width and heigh of the screen
     u32 width = 1920;
     u32 height = 1080;
 
     Color *pixels = (Color *) malloc(sizeof(Color) * width *  height);
+
+    // Set up the camera
 
     Camera camera = {};
 
@@ -27,7 +26,7 @@ int main() {
     camera.viewDirection = {0, 0, 1};
     camera.upVector = {0, 1, 0};
 
-    camera.fovy = 90;
+    camera.fovy = 60;
     camera.nearClippingDistance = 0.1f;
     camera.aspectRatio = (f32) width / (f32) height;
 
@@ -46,6 +45,8 @@ int main() {
     spheres[2].sphere.position = {-2, 1, 8};
     spheres[2].sphere.radius = 1;
     spheres[2].material = PBM_SMOOTH_BLUE;
+
+    // Set up some dummy triangles
 
 #define numTestTriangles 4
     TriangleObject triangles[numTestTriangles];
@@ -74,35 +75,28 @@ int main() {
     triangles[3].triangle.C = { 50, 20,  50};
     triangles[3].material = PBM_GRAY;
 
-#define numTestLights 2
+    // Set up some dummy lights
+
+#define numTestLights 1
     PointLight lights[numTestLights] = {};
-    lights[0].position = {-5,3, 0};
+
+    lights[0].position = {5, 3, -5};
     lights[0].color = {1, 1, 1, 0};
 
-    lights[1].position = {5,5, 0};
-    lights[1].color = {1, 1, 1, 0};
 
 
-    Mesh nol, chair, dragon, dScene;
-    //loadMesh(&nol, "../res/objects/nol.obj");
-    //loadMesh(&chair, "../res/objects/chair.obj");
-    //loadMesh(&dragon, "../res/objects/dragon.obj");
-    loadMesh(&dScene, "../res/objects/dragon_scene.obj");
+    Mesh nol;
+    printf("loading mesh\n");
+    loadMesh(&nol, "../res/objects/nol.obj");
+    printf("loaded mesh\n");
 
 #define numTestModels 1
     Model models[numTestModels] = {};
-    models[0].mesh = &dScene;
-    models[0].transform = Matrix4x4::identity() * Matrix4x4::scale({1, 1, -1});
-            //Matrix4x4::translation({0, 0, 2})
-            //* Matrix4x4::rotationY(-135)
-            //* Matrix4x4::rotationX(-90)
-            //* Matrix4x4::scale({0.02f, 0.02f, 0.02f});
-
-//    models[1].mesh = &nol;
-//    models[1].transform =
-//            Matrix4x4::translation({0.4, 2, 2})
-//            * Matrix4x4::rotationY(-135)
-//            * Matrix4x4::scale({.5f, .5f, .5f});
+    models[0].mesh = &nol;
+    models[0].transform =
+            Matrix4x4::translation({0.4, 2, 4})
+            * Matrix4x4::rotationY(-135)
+            * Matrix4x4::scale({.5f, .5f, .5f});
 
     Scene scene = {};
     scene.backgroundColor = {0.05f, 0.05f, 0.05f, 1};
@@ -165,7 +159,7 @@ int main() {
     }
 
 
-    saveOutBitmap(createBitmap(bmpPixels, width, height), "P:/raytracing/res/reaytracing_test.bmp");
+    saveOutBitmap(createBitmap(bmpPixels, width, height), "P:/raytracing/output/out.bmp");
 
     free(pixels);
     free(bmpPixels);

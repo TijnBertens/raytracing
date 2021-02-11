@@ -8,6 +8,7 @@
 #include "math_utils.h"
 #include "ray.h"
 #include "scene.h"
+#include "bounding_volume_hierarchy.h"
 
 //  ------------------------------------------------------------------------------
 // The following functions are implementations of Physically Based Shading functions
@@ -102,268 +103,13 @@ Color calculateRadiancePBR(Vec3f surfaceNormal, PBMaterial surface, Vec3f viewDi
     return (kD * surface.albedo / PI_32 + specular) * radiance * NdotL;
 }
 
-//  ----------------------------------------------------
-//    Bounding Volume Hierarchy acceleration structure
-//  ----------------------------------------------------
-
-struct BVH_AABB : AABB {
-    Vec3f centroid;
-
-    BVH_AABB() = default;
-    BVH_AABB(Vec3f min, Vec3f max, Vec3f centroid) : AABB() {
-        this->min = min;
-        this->max = max;
-        this->centroid = centroid;
-    }
-};
-
-struct BVH_Triangle {
-    BVH_AABB boundingBox;
-    TriangleObject *triangle;
-};
-
-struct BVH_Node {
-    BVH_AABB boundingBox;
-
-    u32 child1;
-    u32 child2;
-
-    u32 numTriangles;
-    u32 triangleOffset;
-};
-
-struct BVH {
-    u32 numTriangles;
-    BVH_Triangle *triangles;
-    u32 *triangleIDs;
-
-    u32 numNodes;
-    BVH_Node *nodes;
-};
-
-const BVH_AABB EMPTY_BOX({INFINITY, INFINITY, INFINITY},
-        {-INFINITY, -INFINITY, -INFINITY},
-        {0,0,0});
-
-Vec3f calculateCentroid(const BVH_AABB *a) {
-    return a->min + 0.5f * (a->max - a->min);
-}
-
-BVH_AABB combineNoCentroid(const BVH_AABB *a, const Vec3f p) {
-    BVH_AABB result = {};
-
-    result.min = Vec3f::min(a->min, p);
-    result.max = Vec3f::max(a->max, p);
-
-    return result;
-}
-
-BVH_AABB combineNoCentroid(const BVH_AABB *a, const BVH_AABB *b) {
-    BVH_AABB result = {};
-
-    result.min = Vec3f::min(a->min, b->min);
-    result.max = Vec3f::max(a->max, b->max);
-
-    return result;
-}
-
-f32 SA(const BVH_AABB *box) {
-    Vec3f size = {box->max.x - box->min.x, box->max.y - box->min.y, box->max.z - box->min.z};
-    return (2 * size.x * size.y) + (2 * size.y * size.x) + (2 * size.z * size.y);
-}
-
-static u32 recursivelyConstruct(BVH *bvh, u32 tBegin, u32 tEnd, BVH_AABB vb, BVH_AABB cb) {
-
-//    printf("I was created with: \n");
-//    printf("tBegin: %u, tEnd %u \n", tBegin, tEnd);
-//    printf("vb: {%f, %f, %f}  {%f, %f, %f}\n", vb.min.x, vb.min.y, vb.min.z, vb.max.x, vb.max.y, vb.max.z);
-//    printf("cb: {%f, %f, %f}  {%f, %f, %f}\n", cb.min.x, cb.min.y, cb.min.z, cb.max.x, cb.max.y, cb.max.z);
-//    printf("\n");
-
-    // base case
-    if(tEnd - tBegin <= 4) {
-        u32 nodeIndex = bvh->numNodes++;
-        BVH_Node *node = &bvh->nodes[nodeIndex];
-        node->boundingBox = vb;
-        node->numTriangles = tEnd -tBegin;
-        node->triangleOffset = tBegin;
-
-        return nodeIndex;
-    }
-
-    // find dominant axis to split on
-
-    u32 dominantAxis = 0; // 0 = x, 1 = y, 2 = z
-    Vec3f cbSize = {cb.max.x - cb.min.x, cb.max.y - cb.min.y, cb.max.z - cb.min.z};
-
-    if(cbSize.x >= cbSize.y && cbSize.x >= cbSize.z) {
-        dominantAxis = 0;
-    } else if(cbSize.y >= cbSize.x && cbSize.y >= cbSize.z) {
-        dominantAxis = 1;
-    } else {
-        dominantAxis = 2;
-    }
-
-    // pre-compute binning constants
-
-    const u32 K = 8;
-    const f32 eps = 0.0001f;
-    f32 k1 = (K*(1.0f - eps)) / (cb.max.values[dominantAxis] - cb.min.values[dominantAxis]);
-    f32 k0 = cb.min.values[dominantAxis];
-
-    // find the number of triangles and the bounding boxes for each bin
-
-    u32 numTrianglesInBin[K] = {};
-    BVH_AABB binBoundingBox[K] = {};
-
-    for(auto & i : binBoundingBox) {
-        i = EMPTY_BOX;
-    }
-
-    for(u32 i = tBegin; i < tEnd; i++) {
-        BVH_AABB *bb = &bvh->triangles[bvh->triangleIDs[i]].boundingBox;
-        u32 bin = k1*(bb->centroid.values[dominantAxis] - k0);
-
-        numTrianglesInBin[bin]++;
-        binBoundingBox[bin] = combineNoCentroid(&binBoundingBox[bin], bb);
-    }
-
-    // calculate costs
-
-    f32 costL[K-1];
-    f32 costR[K-1];
-
-    // cost left of split
-
-    u32 triangleCount = 0;
-    BVH_AABB growingBB = EMPTY_BOX;
-
-    for(u32 i = 0; i < K - 1; i++) {
-        triangleCount += numTrianglesInBin[i];
-        growingBB = combineNoCentroid(&growingBB, &binBoundingBox[i]);
-        costL[i] = triangleCount * SA(&growingBB);
-    }
-
-    // cost right of split
-
-    triangleCount = 0;
-    growingBB = EMPTY_BOX;
-
-    for(s32 i = K - 2; i >= 0; i--) {
-        triangleCount += numTrianglesInBin[i + 1];
-        growingBB = combineNoCentroid(&growingBB, &binBoundingBox[i + 1]);
-        costR[i] = triangleCount * SA(&growingBB);
-    }
-
-    // find optimal split
-
-    s32 splitNumber = -1;
-    f32 optimalSplitCost = INFINITY;
-    for(u32 i = 0; i < K - 1; i++) {
-        f32 cost = costL[i] + costR[i];
-        if(cost <= optimalSplitCost) {
-            splitNumber = i;
-            optimalSplitCost = cost;
-        }
-    }
-
-    // repartition list
-
-    //TODO: could be done without the copy using two iterators, may be worth it?
-
-    u32 numIDs = tEnd - tBegin;
-    u32 *tempList = (u32 *) malloc(sizeof(u32) * numIDs);
-    memcpy(tempList, bvh->triangleIDs + tBegin, sizeof(u32) * numIDs);
-
-    BVH_AABB leftVb = EMPTY_BOX;
-    BVH_AABB leftCb = EMPTY_BOX;
-
-    BVH_AABB rightVb = EMPTY_BOX;
-    BVH_AABB rightCb = EMPTY_BOX;
-
-    u32 leftCounter = tBegin;
-    u32 rightCounter = tEnd - 1;
-    for(u32 i = 0; i < numIDs; i++) {
-        BVH_AABB *bb = &bvh->triangles[tempList[i]].boundingBox;
-        u32 bin = k1*(bb->centroid.values[dominantAxis] - k0);
-
-        if(bin <= splitNumber) {
-            bvh->triangleIDs[leftCounter++] = tempList[i];
-            leftVb = combineNoCentroid(&leftVb, bb);
-            leftCb = combineNoCentroid(&leftCb, bb->centroid);
-        } else {
-            bvh->triangleIDs[rightCounter--] = tempList[i];
-            rightVb = combineNoCentroid(&rightVb, bb);
-            rightCb = combineNoCentroid(&rightCb, bb->centroid);
-        }
-    }
-
-    leftVb.centroid = calculateCentroid(&leftVb);
-    leftCb.centroid = calculateCentroid(&leftCb);
-    rightVb.centroid = calculateCentroid(&rightVb);
-    rightCb.centroid = calculateCentroid(&rightCb);
-
-    u32 mid = leftCounter;
-
-    free(tempList);
-
-    // recurse
-
-    u32 nodeIndex = bvh->numNodes++;
-    BVH_Node *node = &bvh->nodes[nodeIndex];
-    node->boundingBox = vb;
-    node->child1 = recursivelyConstruct(bvh, tBegin, mid, leftVb, leftCb);
-    node->child2 = recursivelyConstruct(bvh, mid, tEnd, rightVb, rightCb);
-    node->numTriangles = 0;
-    node->triangleOffset = 0;
-
-    return nodeIndex;
-}
-
-BVH constructBVH(TriangleObject *triangles, u32 numTriangles) {
-    BVH result = {};
-
-    result.numTriangles = numTriangles;
-    result.triangles = (BVH_Triangle *) malloc(sizeof(BVH_Triangle) * numTriangles);
-    result.triangleIDs = (u32 *) malloc(sizeof(u32) * numTriangles);
-
-    // Can have at most 2N-1 nodes, so e can pre-allocate node space
-    result.nodes = (BVH_Node *) malloc(sizeof(BVH_Node) * (numTriangles * 2 - 1));
-
-    for(u32 i = 0; i < numTriangles; i++) {
-        result.triangleIDs[i] = i;
-    }
-
-    BVH_AABB vb = EMPTY_BOX;
-    BVH_AABB cb = EMPTY_BOX;
-
-    for(u32 i = 0; i < numTriangles; i++) {
-        BVH_Triangle *t = &result.triangles[i];
-
-        t->triangle = &triangles[i];
-        t->boundingBox.min = Vec3f::min(Vec3f::min(triangles[i].triangle.A, triangles[i].triangle.B), triangles[i].triangle.C);
-        t->boundingBox.max = Vec3f::max(Vec3f::max(triangles[i].triangle.A, triangles[i].triangle.B), triangles[i].triangle.C);
-        t->boundingBox.centroid = calculateCentroid(&t->boundingBox);
-
-        vb = combineNoCentroid(&vb, &t->boundingBox);
-        cb = combineNoCentroid(&cb, t->boundingBox.centroid);
-    }
-
-    recursivelyConstruct(&result, 0, numTriangles, vb, cb);
-
-    return result;
-}
-
-void BVH_free(BVH *bvh) {
-    free(bvh->triangles);
-    free(bvh->triangleIDs);
-    free(bvh->nodes);
-}
-
 //  -------------
 //    Ray tracer
 //  -------------
 
+/**
+ * Contains all data used for raytracing a scene, including the scene, a full list of triangles, and a BVH.
+ */
 struct RayTracer {
     Scene *scene;
 
@@ -381,15 +127,22 @@ struct SceneIntersectReport {
     PBMaterial hitMaterial;
 };
 
+/**
+ * Build a full list of all triangles in a given scene.
+ * This implies instantiating all models in the scene at their respective positions.
+ */
 TriangleObject *buildTriangleList(Scene *scene, u32 *numTriangles) {
+    // Count total number of triangles
     u32 totalNumTriangles = scene->numTriangles;
 
     for(u32 i = 0; i < scene->numModels; i++) {
         totalNumTriangles += scene->models[i].mesh->numTriangles;
     }
 
+    // Allocate memory for all triangles
     TriangleObject *allTriangles = (TriangleObject *) malloc(sizeof(TriangleObject) * totalNumTriangles);
 
+    // Create triangles for all models in the scene
     u32 tIndex = 0;
     for(u32 i = 0; i < scene->numModels; i++) {
         Mesh *mesh = scene->models[i].mesh;
@@ -409,6 +162,8 @@ TriangleObject *buildTriangleList(Scene *scene, u32 *numTriangles) {
                 continue;
             }
 
+            // Create homogeneous coordinates to find world-space positions
+
             Vec4f v1h = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+0]], false);
             Vec4f v2h = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+1]], false);
             Vec4f v3h = Vec3f::toHomogeneous(mesh->vertices[mesh->indices[j*3+2]], false);
@@ -426,17 +181,23 @@ TriangleObject *buildTriangleList(Scene *scene, u32 *numTriangles) {
         }
     }
 
+    // Copy non-model triangles from the scene
     for(u32 i = 0; i < scene->numTriangles; i++) {
         allTriangles[tIndex++] = scene->triangles[i];
     }
 
+    // Trim non-renderable triangles from the list
     u32 usedNumberOfTriangles = tIndex;
     allTriangles = (TriangleObject *) realloc(allTriangles, sizeof(TriangleObject) * usedNumberOfTriangles);
 
     *numTriangles = tIndex;
+
     return allTriangles;
 }
 
+/**
+ * Create a RayTracer for a given scene.
+ */
 RayTracer createRayTracer(Scene *scene) {
     RayTracer result = {};
 
@@ -449,14 +210,19 @@ RayTracer createRayTracer(Scene *scene) {
     return result;
 }
 
+/**
+ * Intersect a ray with a BVH node. Recursively intersects with all children of that node.
+ * @param t the current closest time of intersection found. Used to prune sub-trees that cant produce closer hits.
+ */
 SceneIntersectReport BVHNodeIntersect(const BVH *bvh, const BVH_Node *node, Ray ray, f32 t = INFINITY) {
-    // TODO: numTriangles should maybe be s32 so we can use -1 as an invalid value rather than 0
-    // TODO: pass down closest TOI to prune subtrees that will never result in a closer hit
     if(node->numTriangles != 0) {
+        // If this is a leaf node
+
         f32 closestTOI = INFINITY;
         SceneIntersectReport closestHit = {};
         closestHit.hit.hit = false;
 
+        // Loop over triangles in this leaf node, find closest intersection
         for(u32 i = 0; i < node->numTriangles; i++) {
             u32 idx = i + node->triangleOffset;
             BVH_Triangle *triangle = &bvh->triangles[bvh->triangleIDs[idx]];
@@ -471,10 +237,13 @@ SceneIntersectReport BVHNodeIntersect(const BVH *bvh, const BVH_Node *node, Ray 
 
         return closestHit;
     } else {
+        // If this is not a leaf node
+
         f32 closestTOI = t;
         SceneIntersectReport closestHit = {};
         closestHit.hit.hit = false;
 
+        // Recursively intersect first child node
         HitCheck h1 = hitCheck(ray, bvh->nodes[node->child1].boundingBox);
         if(h1.hit && h1.TOI <= closestTOI) {
             SceneIntersectReport c1 = BVHNodeIntersect(bvh, &bvh->nodes[node->child1], ray, closestTOI);
@@ -485,6 +254,7 @@ SceneIntersectReport BVHNodeIntersect(const BVH *bvh, const BVH_Node *node, Ray 
             }
         }
 
+        // Recursively intersect second child node
         HitCheck h2 = hitCheck(ray, bvh->nodes[node->child2].boundingBox);
         if(h2.hit && h2.TOI <= closestTOI) {
             SceneIntersectReport c2 = BVHNodeIntersect(bvh, &bvh->nodes[node->child2], ray, closestTOI);
@@ -498,12 +268,36 @@ SceneIntersectReport BVHNodeIntersect(const BVH *bvh, const BVH_Node *node, Ray 
     }
 }
 
+/**
+ * Intersect a ray with a BVH.
+ */
 SceneIntersectReport intersectBVH(Ray ray, BVH bvh) {
-    SceneIntersectReport result = {};
-
-    result = BVHNodeIntersect(&bvh, &bvh.nodes[0], ray);
-
+    // Simply start a recursive intersect from the root node
+    SceneIntersectReport result = BVHNodeIntersect(&bvh, &bvh.nodes[0], ray);
     return result;
+}
+
+/**
+ *  Intersects a ray with the scene belonging to a given raytracer.
+ */
+SceneIntersectReport intersectScene(RayTracer *tracer, Ray ray) {
+    // First intersect the BVH, and take that as closest hit
+    SceneIntersectReport closestHit = intersectBVH(ray, tracer->bvh);
+
+    // Go over all spheres separately, and check for closer hits
+    for(u32 i = 0; i < tracer->scene->numSpheres; i++) {
+        RayHit sphereHit = intersect(ray, tracer->scene->spheres[i].sphere);
+
+        bool isFirstHit = (!closestHit.hit.hit && sphereHit.hit);
+        bool isCloserHit = (sphereHit.hit && (sphereHit.TOI < closestHit.hit.TOI));
+
+        if(isFirstHit || isCloserHit) {
+            closestHit.hit = sphereHit;
+            closestHit.hitMaterial = tracer->scene->spheres[i].material;
+        }
+    }
+
+    return closestHit;
 }
 
 /**
@@ -511,9 +305,10 @@ SceneIntersectReport intersectBVH(Ray ray, BVH bvh) {
  * @param traceDepth How many levels of recursive reflections will be sampled.
  */
 Color traceRay(RayTracer *tracer, Ray ray, u32 traceDepth = 5) {
+    // Base case for recursion
     if(traceDepth == 0) return tracer->scene->backgroundColor;
 
-    SceneIntersectReport sceneIntersect = intersectBVH(ray, tracer->bvh);
+    SceneIntersectReport sceneIntersect = intersectScene(tracer, ray);
 
     // Did not hit anything, so we can return the background color
     if(!sceneIntersect.hit.hit) {
@@ -532,7 +327,7 @@ Color traceRay(RayTracer *tracer, Ray ray, u32 traceDepth = 5) {
         shadowRay.start = sceneIntersect.hit.hitPosition;
         shadowRay.direction = hitToLight.normalized();
 
-        SceneIntersectReport shadowTrace = intersectBVH(shadowRay, tracer->bvh);
+        SceneIntersectReport shadowTrace = intersectScene(tracer, shadowRay);
 
         if(!(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length())) {
             Vec3f lightDirection = (tracer->scene->lights[i].position - sceneIntersect.hit.hitPosition).normalized();

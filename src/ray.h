@@ -45,26 +45,29 @@ struct HitCheck {
 RayHit intersect(Ray ray, Sphere sphere) {
     RayHit result = {};
 
-    // sphere formula:
-    // || point - center ||^2 - r^2 = 0
+    // Solve intersection as quadratic equation
 
-    // b = direction dot (start - center)
-    f32 b = ray.direction.dot(ray.start - sphere.position);
+    // a = || dir  ||^2
+    float a = ray.direction.lengthSq();
 
-    // || start - center ||^2 - r^2
-    f32 c = (ray.start - sphere.position).lengthSq() - (sphere.radius * sphere.radius);
+    // b = 2 * (dir dot (start - center))
+    float b = 2*ray.direction.dot(ray.start - sphere.position);
 
-    // no roots, no solution
-    if (b * b - c < 0) {
+    // c = || start - center ||^2 - r^2
+    float c = (ray.start - sphere.position).lengthSq() - (sphere.radius * sphere.radius);
+
+    // find roots
+    float d = b*b - 4*a*c;
+
+    if(d < 0) {
         result.hit = false;
         return result;
     }
 
-    // intersection times
-    float t1 = -b - sqrt(b * b - c);
-    float t2 = -b + sqrt(b * b - c);
+    float t1 = (-b - sqrt(d)) / (2*a);
+    float t2 = (-b + sqrt(d)) / (2*a);
 
-    // no hit if the intersection is behind the start
+    // No hit if the intersections are behind the start
     if (t1 <= 0 && t2 <= 0) {
         result.hit = false;
         return result;
@@ -72,6 +75,10 @@ RayHit intersect(Ray ray, Sphere sphere) {
 
     // Get closest hit
     float t = fmin(t1, t2) - HIT_EPSILON;
+
+    // One of the hits could be behind the start, do not pick that one
+    if(t1 <= 0) t = t2 - HIT_EPSILON;
+    if(t2 <= 0) t = t1 - HIT_EPSILON;
 
     result.hit = true;
     result.TOI = t;

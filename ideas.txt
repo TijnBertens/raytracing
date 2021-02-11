@@ -1,9 +1,11 @@
 //TODO:
 
+- unity build was a bad idea, could switch to normal build.
+- include implicit primitives (spheres) into BVH
 
-- textures
-- hierarchical bounding box for speedup
-- import models
+- interactive UI for scene-editing
+- textures/normals/bumpmaps in models
 - different light types
-- anti-alisasing / super sampling / multiple rays per pixel
-- RTX?
+
+- multithreading
+- RTX/CUDA?
