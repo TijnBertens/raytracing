@@ -36,15 +36,15 @@ int main() {
     SphereObject spheres[numTestSpheres] = {};
     spheres[0].sphere.position = {0, 2, 10};
     spheres[0].sphere.radius = 2;
-    spheres[0].material = PBM_ROUGH_RED;
+    spheres[0].material = &PBM_ROUGH_RED;
 
     spheres[1].sphere.position = {8, 3, 9};
     spheres[1].sphere.radius = 3;
-    spheres[1].material = PBM_METALLIC_GREEN;
+    spheres[1].material = &PBM_METALLIC_GREEN;
 
     spheres[2].sphere.position = {-2, 1, 8};
     spheres[2].sphere.radius = 1;
-    spheres[2].material = PBM_SMOOTH_BLUE;
+    spheres[2].material = &PBM_SMOOTH_BLUE;
 
     // Set up some dummy triangles
 
@@ -56,24 +56,24 @@ int main() {
     triangles[0].triangle.B = {-50, 0, -50};
     triangles[0].triangle.A = { 50, 0, -50};
     triangles[0].triangle.C = {-50, 0,  50};
-    triangles[0].material = PBM_GRAY;
+    triangles[0].material = &PBM_GRAY;
 
     triangles[1].triangle.B = {-50, 0,  50};
     triangles[1].triangle.A = { 50, 0, -50};
     triangles[1].triangle.C = { 50, 0,  50};
-    triangles[1].material = PBM_GRAY;
+    triangles[1].material = &PBM_GRAY;
 
     // back wall
 
     triangles[2].triangle.B = {-50, 20,  50};
     triangles[2].triangle.A = {-50,  0,  50};
     triangles[2].triangle.C = { 50,  0,  50};
-    triangles[2].material = PBM_GRAY;
+    triangles[2].material = &PBM_GRAY;
 
     triangles[3].triangle.B = {-50, 20,  50};
     triangles[3].triangle.A = { 50,  0,  50};
     triangles[3].triangle.C = { 50, 20,  50};
-    triangles[3].material = PBM_GRAY;
+    triangles[3].material = &PBM_GRAY;
 
     // Set up some dummy lights
 
@@ -149,9 +149,9 @@ int main() {
 //            pixels[x + y * width].g = pixels[x + y * width].g / (pixels[x + y * width].g + 1);
 //            pixels[x + y * width].b = pixels[x + y * width].b / (pixels[x + y * width].b + 1);
 
-            pixels[x + y * width].r = powf(pixels[x + y * width].r, 1.0f/2.2f);
-            pixels[x + y * width].g = powf(pixels[x + y * width].g, 1.0f/2.2f);
-            pixels[x + y * width].b = powf(pixels[x + y * width].b, 1.0f/2.2f);
+//            pixels[x + y * width].r = powf(pixels[x + y * width].r, 1.0f/2.2f);
+//            pixels[x + y * width].g = powf(pixels[x + y * width].g, 1.0f/2.2f);
+//            pixels[x + y * width].b = powf(pixels[x + y * width].b, 1.0f/2.2f);
         }
     }
 

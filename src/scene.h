@@ -18,7 +18,7 @@
  */
 struct SphereObject {
     Sphere sphere;              // sphere geometry
-    PBMaterial material;        // physically based material
+    const PBMaterial *material; // physically based material
 };
 
 /**
@@ -26,7 +26,7 @@ struct SphereObject {
  */
 struct TriangleObject {
     Triangle triangle;          // triangle geometry
-    PBMaterial material;        // physically based material
+    const PBMaterial *material; // physically based material
 };
 
 /**
@@ -41,7 +41,7 @@ struct Model {
  * Point light.
  */
 struct PointLight {
-    Vec3f position;          // world space position
+    Vec3f position;             // world space position
     Color color;                // color of emitted light
 };
 

@@ -124,7 +124,7 @@ struct RayTracer {
  */
 struct SceneIntersectReport {
     RayHit hit;
-    PBMaterial hitMaterial;
+    PBMaterial hitMaterial;         // TODO: if we every switch to more advanced materials, this should be a pointer
 };
 
 /**
@@ -175,7 +175,7 @@ TriangleObject *buildTriangleList(Scene *scene, u32 *numTriangles) {
             allTriangles[tIndex].triangle.A = v1t;
             allTriangles[tIndex].triangle.B = v2t;
             allTriangles[tIndex].triangle.C = v3t;
-            allTriangles[tIndex].material = PBM_SMOOTH_OFF_WHITE; //TODO: load materials for meshes
+            allTriangles[tIndex].material = &mesh->materials[mesh->materialIndices[j]];
 
             tIndex++;
         }
@@ -231,7 +231,7 @@ SceneIntersectReport BVHNodeIntersect(const BVH *bvh, const BVH_Node *node, Ray 
             if(hit.hit && hit.TOI < closestTOI) {
                 closestTOI = hit.TOI;
                 closestHit.hit = hit;
-                closestHit.hitMaterial = triangle->triangle->material;
+                closestHit.hitMaterial = *triangle->triangle->material;
             }
         }
 
@@ -293,7 +293,7 @@ SceneIntersectReport intersectScene(RayTracer *tracer, Ray ray) {
 
         if(isFirstHit || isCloserHit) {
             closestHit.hit = sphereHit;
-            closestHit.hitMaterial = tracer->scene->spheres[i].material;
+            closestHit.hitMaterial = *tracer->scene->spheres[i].material;
         }
     }
 
