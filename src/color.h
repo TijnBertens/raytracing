@@ -57,10 +57,10 @@ struct IntColor {
 inline IntColor toIntColor(Color c) {
     IntColor result;
 
-    result.r = (u32) (c.r * 255);
-    result.g = (u32) (c.g * 255);
-    result.b = (u32) (c.b * 255);
-    result.a = (u32) (c.a * 255);
+    result.r = (u32) fmin(255, c.r * 255);
+    result.g = (u32) fmin(255, c.g * 255);
+    result.b = (u32) fmin(255, c.b * 255);
+    result.a = (u32) fmin(255, c.a * 255);
 
     return result;
 }
@@ -100,10 +100,10 @@ inline Color mix(Color a, Color b, f32 mixFactor) {
 inline Color operator+(Color a, Color b) {
     Color result = {};
 
-    result.r = fmin(1.0, a.r + b.r);
-    result.g = fmin(1.0, a.g + b.g);
-    result.b = fmin(1.0, a.b + b.b);
-    result.a = fmin(1.0, a.a + b.a);
+    result.r = a.r + b.r;
+    result.g = a.g + b.g;
+    result.b = a.b + b.b;
+    result.a = a.a + b.a;
 
     return result;
 }
@@ -128,10 +128,10 @@ inline Color operator-(Color a, Color b) {
 inline Color operator*(f32 s, Color c) {
     Color result = {};
 
-    result.r = fmin(1.0, s * c.r);
-    result.g = fmin(1.0, s * c.g);
-    result.b = fmin(1.0, s * c.b);
-    result.a = fmin(1.0, s * c.a);
+    result.r = s * c.r;
+    result.g = s * c.g;
+    result.b = s * c.b;
+    result.a = s * c.a;
 
     return result;
 }
@@ -142,10 +142,10 @@ inline Color operator*(f32 s, Color c) {
 inline Color operator*(Color c, f32 s) {
     Color result = {};
 
-    result.r = fmin(1.0, s * c.r);
-    result.g = fmin(1.0, s * c.g);
-    result.b = fmin(1.0, s * c.b);
-    result.a = fmin(1.0, s * c.a);
+    result.r = s * c.r;
+    result.g = s * c.g;
+    result.b = s * c.b;
+    result.a = s * c.a;
 
     return result;
 }
@@ -170,10 +170,10 @@ inline Color operator*(Color a, Color b) {
 inline Color operator/(f32 s, Color c) {
     Color result = {};
 
-    result.r = clamp(c.r / s, 0, 1);
-    result.g = clamp(c.g / s, 0, 1);
-    result.b = clamp(c.b / s, 0, 1);
-    result.a = clamp(c.a / s, 0, 1);
+    result.r = fmax(0, c.r / s);
+    result.g = fmax(0, c.g / s);
+    result.b = fmax(0, c.b / s);
+    result.a = fmax(0, c.a / s);
 
     return result;
 }
@@ -184,10 +184,10 @@ inline Color operator/(f32 s, Color c) {
 inline Color operator/(Color c, f32 s) {
     Color result = {};
 
-    result.r = clamp(c.r / s, 0, 1);
-    result.g = clamp(c.g / s, 0, 1);
-    result.b = clamp(c.b / s, 0, 1);
-    result.a = clamp(c.a / s, 0, 1);
+    result.r = fmax(0, c.r / s);
+    result.g = fmax(0, c.g / s);
+    result.b = fmax(0, c.b / s);
+    result.a = fmax(0, c.a / s);
 
     return result;
 }

@@ -67,12 +67,15 @@ f32 GeometrySmith(Vec3f N, Vec3f V, Vec3f L, f32 roughness)
 }
 
 /**
- * Evaluates the radiance at a surface point for a single incoming light direction.
+ * Evaluates the radiance at a surface point for a single light.
  * All input directions must be normalized!
  */
-Color calculateRadiancePBR(Vec3f surfaceNormal, PBMaterial surface, Vec3f viewDirection, Vec3f lightDirection, Color lightRadiance) {
+Color calculateRadiancePBR(Vec3f surfacePosition, Vec3f surfaceNormal, PBMaterial surface, Vec3f viewDirection, PointLight light) {
     Vec3f V = viewDirection;
     Vec3f N = surfaceNormal;
+
+    Vec3f lightVector = light.position - surfacePosition;
+    Vec3f lightDirection = lightVector.normalized();
 
     Color F0 = {0.3, 0.3, 0.3, 1};
     F0 = mix(F0, surface.albedo, surface.metallic);
@@ -80,10 +83,10 @@ Color calculateRadiancePBR(Vec3f surfaceNormal, PBMaterial surface, Vec3f viewDi
     // calculate per-light radiance
     Vec3f L = lightDirection;
     Vec3f H = (V + L).normalized();
-    //f32 distance    = (light.position - surfacePosition).length();
-    //f32 attenuation = 1.0 / (distance * distance); //todo: different attenuation
+    f32 distance    = lightVector.length() / 5.0;
+    f32 attenuation = 1.0 / (distance * distance); //todo: different attenuation?
 
-    Color radiance = lightRadiance;
+    Color radiance = light.color * attenuation;
 
     // cook-torrance brdf
     f32 NDF = DistributionGGX(N, H, surface.roughness);
@@ -101,6 +104,26 @@ Color calculateRadiancePBR(Vec3f surfaceNormal, PBMaterial surface, Vec3f viewDi
     // return outgoing radiance
     f32 NdotL = fmax(N.dot(L), 0.0);
     return (kD * surface.albedo / PI_32 + specular) * radiance * NdotL;
+}
+
+/**
+ * Hack to incorporate reflections. Computes added radiance from a reflection ray with given direction and color.
+ */
+Color calculateReflectionInfluence(Vec3f surfaceNormal, PBMaterial surface, Vec3f viewDirection, Vec3f reflectionDirection, Color reflectionColor) {
+    Vec3f V = viewDirection;
+
+    Color F0 = {0.3, 0.3, 0.3, 1};
+    F0 = mix(F0, surface.albedo, surface.metallic);
+
+    // calculate per-light radiance
+    Vec3f L = reflectionDirection;
+    Vec3f H = (V + L).normalized();
+
+    Color radiance= reflectionColor;
+    Color F = fresnelSchlickRoughness(fmax(H.dot(V), 0.0), F0, surface.roughness);
+    f32 NdotL = fmax(surfaceNormal.dot(L), 0.0); //TODO: does this improve the situation?
+
+    return F * radiance * NdotL;
 }
 
 //  -------------
@@ -125,6 +148,14 @@ struct RayTracer {
 struct SceneIntersectReport {
     RayHit hit;
     PBMaterial hitMaterial;         // TODO: if we every switch to more advanced materials, this should be a pointer
+};
+
+/**
+ * Result of tracing a ray through a scene.
+ */
+struct TraceReport {
+    SceneIntersectReport firstHit;
+    Color color;
 };
 
 /**
@@ -304,19 +335,28 @@ SceneIntersectReport intersectScene(RayTracer *tracer, Ray ray) {
  * Use a RayTracer to trace a ray through a scene. Returns the color of the queried ray.
  * @param traceDepth How many levels of recursive reflections will be sampled.
  */
-Color traceRay(RayTracer *tracer, Ray ray, u32 traceDepth = 5) {
+TraceReport traceRay(RayTracer *tracer, Ray ray, u32 traceDepth = 5) {
     // Base case for recursion
-    if(traceDepth == 0) return tracer->scene->backgroundColor;
+    if(traceDepth == 0) {
+        TraceReport result = {};
+        result.firstHit.hit.hit = false;
+        result.color = tracer->scene->backgroundColor;
+        return result;
+    }
 
+    // Intersect ray with scene
     SceneIntersectReport sceneIntersect = intersectScene(tracer, ray);
 
     // Did not hit anything, so we can return the background color
     if(!sceneIntersect.hit.hit) {
-        return tracer->scene->backgroundColor;
+        TraceReport result = {};
+        result.firstHit = sceneIntersect;
+        result.color = tracer->scene->backgroundColor;
+        return result;
     }
 
     Color surfaceColor = {0, 0, 0, 1};
-    Color ambientTerm = 0.03 *sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
+    Color ambientTerm = 0.03 * sceneIntersect.hitMaterial.albedo * sceneIntersect.hitMaterial.ao;
     Vec3f viewDirection = (ray.start - sceneIntersect.hit.hitPosition).normalized();
 
     // Apply lighting
@@ -330,27 +370,42 @@ Color traceRay(RayTracer *tracer, Ray ray, u32 traceDepth = 5) {
         SceneIntersectReport shadowTrace = intersectScene(tracer, shadowRay);
 
         if(!(shadowTrace.hit.hit && shadowTrace.hit.TOI <= hitToLight.length())) {
-            Vec3f lightDirection = (tracer->scene->lights[i].position - sceneIntersect.hit.hitPosition).normalized();
-            surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, lightDirection, tracer->scene->lights[i].color);
+            surfaceColor = surfaceColor + calculateRadiancePBR(
+                    sceneIntersect.hit.hitPosition,
+                    sceneIntersect.hit.hitNormal,
+                    sceneIntersect.hitMaterial,
+                    viewDirection,
+                    tracer->scene->lights[i]);
         }
     }
 
     //reflection
 
-    if(sceneIntersect.hitMaterial.roughness < 0.8f) {
+    if(sceneIntersect.hitMaterial.roughness < 0.3f) {
         Ray reflectionRay = {};
         reflectionRay.start = sceneIntersect.hit.hitPosition;
         reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);
-        Color reflectionColor = traceRay(tracer, reflectionRay, traceDepth - 1);
+        TraceReport reflectionReport = traceRay(tracer, reflectionRay, traceDepth - 1);
 
-        surfaceColor = surfaceColor + calculateRadiancePBR(sceneIntersect.hit.hitNormal, sceneIntersect.hitMaterial, viewDirection, reflectionRay.direction, reflectionColor);
+        surfaceColor = surfaceColor + calculateReflectionInfluence(
+                sceneIntersect.hit.hitNormal,
+                sceneIntersect.hitMaterial,
+                viewDirection,
+                reflectionRay.direction,
+                reflectionReport.color);
     }
 
     surfaceColor = surfaceColor + ambientTerm;
 
     //todo: refraction
     surfaceColor.a = 1; //todo: handle alpha
-    return surfaceColor;
+
+    // Create result report
+    TraceReport result = {};
+    result.firstHit = sceneIntersect;
+    result.color = surfaceColor;
+
+    return result;
 }
 
 

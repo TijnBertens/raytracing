@@ -26,7 +26,7 @@ int main() {
     camera.viewDirection = {0, 0, 1};
     camera.upVector = {0, 1, 0};
 
-    camera.fovy = 60;
+    camera.fovy = 90;
     camera.nearClippingDistance = 0.1f;
     camera.aspectRatio = (f32) width / (f32) height;
 
@@ -77,11 +77,13 @@ int main() {
 
     // Set up some dummy lights
 
-#define numTestLights 1
+#define numTestLights 2
     PointLight lights[numTestLights] = {};
-
-    lights[0].position = {5, 3, -5};
+    lights[0].position = {-5,3, 5};
     lights[0].color = {1, 1, 1, 0};
+
+    lights[1].position = {5,5, 4};
+    lights[1].color = {1, 1, 1, 0};
 
     // Load dummy mesh
 
@@ -136,7 +138,9 @@ int main() {
                 ray.start = rayP;
                 ray.direction = rayD;
 
-                pixels[x + y * width] = pixels[x + y * width] + (1.0 / SAMPLES) * traceRay(&rayTracer, ray);
+                TraceReport traceReport = traceRay(&rayTracer, ray);
+
+                pixels[x + y * width] = pixels[x + y * width] + (1.0 / SAMPLES) * traceReport.color;
             }
         }
     }
@@ -145,9 +149,9 @@ int main() {
 
     for(u32 y = 0; y < height; y++) {
         for(u32 x = 0; x < width; x++) {
-//            pixels[x + y * width].r = pixels[x + y * width].r / (pixels[x + y * width].r + 1);
-//            pixels[x + y * width].g = pixels[x + y * width].g / (pixels[x + y * width].g + 1);
-//            pixels[x + y * width].b = pixels[x + y * width].b / (pixels[x + y * width].b + 1);
+            pixels[x + y * width].r = pixels[x + y * width].r / (pixels[x + y * width].r + 1);
+            pixels[x + y * width].g = pixels[x + y * width].g / (pixels[x + y * width].g + 1);
+            pixels[x + y * width].b = pixels[x + y * width].b / (pixels[x + y * width].b + 1);
 
 //            pixels[x + y * width].r = powf(pixels[x + y * width].r, 1.0f/2.2f);
 //            pixels[x + y * width].g = powf(pixels[x + y * width].g, 1.0f/2.2f);
