@@ -1,0 +1,10 @@
+//TODO:
+
+- unity build was a bad idea, could switch to normal build.
+- include implicit primitives (spheres) into BVH
+
+- interactive UI for scene-editing
+- textures/normals/bumpmaps in models
+- different light types
+
+- RTX/CUDA?

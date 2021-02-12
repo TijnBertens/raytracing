@@ -1,3 +1,10 @@
+# blender project files
+*.blend
+*.blend1
+
+# Stanford models
+*.ply
+
 ### gitignore/C++.gitignore ###
 
 # Prerequisites
@@ -120,3 +127,6 @@ fabric.properties
 # Do not ignore necessary library and dll files for building
 !libs/*.*
 !dll/*.*
+.vscode/ipch/2a1a7d1438d472ab/MAIN.ipch
+.vscode/ipch/5fed86b75498c3ae/mmap_address.bin
+.vscode/ipch/9310f27dc75d9cc1/mmap_address.bin
