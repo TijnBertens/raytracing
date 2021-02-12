@@ -119,7 +119,7 @@ void setupThreeBallScene(Scene *scene, Camera *camera, u32 width, u32 height) {
     camera->fovy = 90;
     camera->nearClippingDistance = 0.1f;
     camera->aspectRatio = (f32) width / (f32) height;
-    camera->exposure = 1.0f;
+    camera->exposure = 0.8f;
 
     // Setup spheres
     scene->numSpheres = 3;
@@ -169,10 +169,10 @@ void setupThreeBallScene(Scene *scene, Camera *camera, u32 width, u32 height) {
     scene->lights = (PointLight *) malloc(sizeof(PointLight) * scene->numLights);
 
     scene->lights[0].position = {-5,3, 5};
-    scene->lights[0].color = {1, 1, 1, 0};
+    scene->lights[0].color = {3, 3, 3, 0};
 
     scene->lights[1].position = {5,5, 4};
-    scene->lights[1].color = {1, 1, 1, 0};
+    scene->lights[1].color = {3, 3, 3, 0};
 
     // Setup models
     scene->numModels = 0;

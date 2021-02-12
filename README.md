@@ -1,3 +1,5 @@
+![splash](images/dragon.bmp)
+
 # Raytracing
 
 This project is a software raytracer made for educational purposes. It uses the [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader) for loading `.OBJ` files, but besides that, is completely made from scratch. Features include:
@@ -15,6 +17,8 @@ For each pixel on the screen, multiple rays are shot into the scene. When a ray 
 If a material is smooth enough, it will also show a reflection. This is done by tracing an additional reflection ray. Reflection rays can create new reflection rays themselves, thus creating nested reflections.
 
 The different samples taken for each pixel are averaged, creating an Anti Aliasing effect.
+
+![balls](images/balls.bmp)
 
 ## Acceleration Structure
 This raytracer can handle scenes with millions of triangles, while still rendering images in less than a minute! To achieve this, an acceleration structure is built that greatly speeds up ray-triangle intersection. More specifically, this project uses a Bounding Volume Hierarchy (BVH) constructed using the Surface Area Heuristic (SAH) technique proposed by [Ingo Wald](https://doi.org/10.1109/RT.2007.4342588).
