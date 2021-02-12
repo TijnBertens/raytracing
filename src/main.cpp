@@ -1,5 +1,6 @@
 #include <malloc.h>
 #include <random>
+#include <thread>
 #include "types.h"
 #include "math_utils.h"
 #include "color.h"
@@ -7,6 +8,104 @@
 #include "scene.h"
 #include "file_io.h"
 #include "ray_tracer.h"
+
+#define USE_MULTI_THREADING
+#define NUM_THREADS 8
+#define TILE_SIZE 32
+
+/**
+ * Function called by each thread. Image is divided into tiles, which are divided over the threads.
+ */
+void threadWork(u32 threadID, u32 imageWidth, u32 imageHeight, Color *pixels, RayTracer *tracer, Camera camera) {
+    // Calculate number of tiles in total / horizontal direction / vertical direction
+    u32 numTilesHor = (imageWidth + TILE_SIZE - 1) / TILE_SIZE;
+    u32 numTilesVert = (imageHeight + TILE_SIZE - 1) / TILE_SIZE;
+
+    u32 totalNumTiles = numTilesHor * numTilesVert;
+
+    // Loop over tiles
+    for(u32 tileID = threadID; tileID < totalNumTiles; tileID += NUM_THREADS) {
+        u32 startX = (tileID % numTilesHor) * TILE_SIZE;
+        u32 startY = (tileID / numTilesHor) * TILE_SIZE;
+
+        printf("Thread %u starting tile %u / %u...\n", threadID, (tileID + 1), totalNumTiles);
+
+        // Process pixels in tile
+        for(u32 y = startY; y < startY + TILE_SIZE && y < imageHeight; y++) {
+
+            for(u32 x = startX; x < startX + TILE_SIZE && x < imageWidth; x++) {
+                // Number of samples per pixel
+                const u32 SAMPLES = 15;
+
+                pixels[x + y * imageWidth] = {0, 0, 0, 0};
+                for(u32 i = 0; i < SAMPLES; i++) {
+                    Vec3f wPixel = pixelToWorldSpaceRand(camera, x, y, imageWidth, imageHeight);
+
+                    Vec3f rayP = wPixel;
+                    Vec3f rayD = (wPixel - camera.position).normalized();
+
+                    Ray ray = {};
+                    ray.start = rayP;
+                    ray.direction = rayD;
+
+                    TraceReport traceReport = traceRay(tracer, ray);
+
+                    pixels[x + y * imageWidth] = pixels[x + y * imageWidth] + (1.0 / SAMPLES) * traceReport.color;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renders the output image using multi-threading. Instantiates NUM_THREADS threads.
+ */
+void threadedRender(u32 imageWidth, u32 imageHeight, Color *pixels, RayTracer *tracer, Camera camera) {
+    // Array to keep track of threads
+    std::thread threads[NUM_THREADS];
+
+    // Instantiate all threads
+    for(u32 i = 0; i < NUM_THREADS; i++) {
+        threads[i] = std::thread(threadWork, i, imageWidth, imageHeight, pixels, tracer, camera);
+    }
+
+    // Wait for all threads to finish
+    for(u32 i = 0; i < NUM_THREADS; i++) {
+        threads[i].join();
+    }
+}
+
+/**
+ * Renders the output image without mulit-threading.
+ */
+void render(u32 imageWidth, u32 imageHeight, Color *pixels, RayTracer *rayTracer, Camera camera) {
+    // Process all pixels
+    for(u32 y = 0; y < imageHeight; y++) {
+
+        printf("Reached pixel line %u.\n", y);
+
+        for(u32 x = 0; x < imageWidth; x++) {
+            // Number of samples per pixel
+            const u32 SAMPLES = 15;
+
+            pixels[x + y * imageWidth] = {0, 0, 0, 0};
+            for(u32 i = 0; i < SAMPLES; i++) {
+                Vec3f wPixel = pixelToWorldSpaceRand(camera, x, y, imageWidth, imageHeight);
+
+                Vec3f rayP = wPixel;
+                Vec3f rayD = (wPixel - camera.position).normalized();
+
+                Ray ray = {};
+                ray.start = rayP;
+                ray.direction = rayD;
+
+                TraceReport traceReport = traceRay(rayTracer, ray);
+
+                pixels[x + y * imageWidth] = pixels[x + y * imageWidth] + (1.0 / SAMPLES) * traceReport.color;
+            }
+        }
+    }
+}
 
 int main() {
     // Seed the RNG
@@ -119,32 +218,11 @@ int main() {
     // Build ray tracer from scene
     RayTracer rayTracer = createRayTracer(&scene);
 
-    // Process all pixels
-    for(u32 y = 0; y < height; y++) {
-
-        printf("Reached pixel line %u.\n", y);
-
-        for(u32 x = 0; x < width; x++) {
-            // Number of samples per pixel
-            const u32 SAMPLES = 15;
-
-            pixels[x + y * width] = {0, 0, 0, 0};
-            for(u32 i = 0; i < SAMPLES; i++) {
-                Vec3f wPixel = pixelToWorldSpaceRand(camera, x, y, width, height);
-
-                Vec3f rayP = wPixel;
-                Vec3f rayD = (wPixel - camera.position).normalized();
-
-                Ray ray = {};
-                ray.start = rayP;
-                ray.direction = rayD;
-
-                TraceReport traceReport = traceRay(&rayTracer, ray);
-
-                pixels[x + y * width] = pixels[x + y * width] + (1.0 / SAMPLES) * traceReport.color;
-            }
-        }
-    }
+#ifdef USE_MULTI_THREADING
+    threadedRender(width, height ,pixels, &rayTracer, camera);
+#else
+    render(width, height ,pixels, &rayTracer, camera);
+#endif
 
     // Tone mapping
 

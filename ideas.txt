@@ -7,5 +7,4 @@
 - textures/normals/bumpmaps in models
 - different light types
 
-- multithreading
 - RTX/CUDA?
