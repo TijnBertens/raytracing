@@ -381,7 +381,7 @@ TraceReport traceRay(RayTracer *tracer, Ray ray, u32 traceDepth = 5) {
 
     //reflection
 
-    if(sceneIntersect.hitMaterial.roughness < 0.3f) {
+    if(sceneIntersect.hitMaterial.roughness <= 0.3f) {
         Ray reflectionRay = {};
         reflectionRay.start = sceneIntersect.hit.hitPosition;
         reflectionRay.direction = ray.direction.reflectIn(sceneIntersect.hit.hitNormal);

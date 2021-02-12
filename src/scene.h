@@ -64,5 +64,15 @@ struct Scene {
     u32 numLights;
 };
 
+/**
+ * Release allocated memory for a scene.
+ */
+void freeScene(Scene *scene) {
+    free(scene->spheres);
+    free(scene->triangles);
+    free(scene->models);
+    free(scene->lights);
+}
+
 
 #endif //RAYTRACING_SCENE_H

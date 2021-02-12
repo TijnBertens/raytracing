@@ -1,3 +1,10 @@
+# blender project files
+*.blend
+*.blend1
+
+# Stanford models
+*.ply
+
 ### gitignore/C++.gitignore ###
 
 # Prerequisites

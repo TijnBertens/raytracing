@@ -107,6 +107,137 @@ void render(u32 imageWidth, u32 imageHeight, Color *pixels, RayTracer *rayTracer
     }
 }
 
+/**
+ * Sets up a scene with three balls, a floor, and a back-wall.
+ */
+void setupThreeBallScene(Scene *scene, Camera *camera, u32 width, u32 height) {
+    // Setup camera
+    camera->position = {0, 1, 0};
+    camera->viewDirection = {0, 0, 1};
+    camera->upVector = {0, 1, 0};
+
+    camera->fovy = 90;
+    camera->nearClippingDistance = 0.1f;
+    camera->aspectRatio = (f32) width / (f32) height;
+    camera->exposure = 1.0f;
+
+    // Setup spheres
+    scene->numSpheres = 3;
+    scene->spheres = (SphereObject *) malloc(sizeof(SphereObject) * scene->numSpheres);
+    scene->spheres[0].sphere.position = {0, 2, 10};
+    scene->spheres[0].sphere.radius = 2;
+    scene->spheres[0].material = &PBM_ROUGH_RED;
+
+    scene->spheres[1].sphere.position = {8, 3, 9};
+    scene->spheres[1].sphere.radius = 3;
+    scene->spheres[1].material = &PBM_METALLIC_GREEN;
+
+    scene->spheres[2].sphere.position = {-2, 1, 8};
+    scene->spheres[2].sphere.radius = 1;
+    scene->spheres[2].material = &PBM_SMOOTH_BLUE;
+
+    // Setup triangles
+    scene->numTriangles = 4;
+    scene->triangles = (TriangleObject *) malloc(sizeof(TriangleObject) * scene->numTriangles);
+
+    // floor
+
+    scene->triangles[0].triangle.B = {-50, 0, -50};
+    scene->triangles[0].triangle.A = { 50, 0, -50};
+    scene->triangles[0].triangle.C = {-50, 0,  50};
+    scene->triangles[0].material = &PBM_GRAY;
+
+    scene->triangles[1].triangle.B = {-50, 0,  50};
+    scene->triangles[1].triangle.A = { 50, 0, -50};
+    scene->triangles[1].triangle.C = { 50, 0,  50};
+    scene->triangles[1].material = &PBM_GRAY;
+
+    // back wall
+
+    scene->triangles[2].triangle.B = {-50, 20,  50};
+    scene->triangles[2].triangle.A = {-50,  0,  50};
+    scene->triangles[2].triangle.C = { 50,  0,  50};
+    scene->triangles[2].material = &PBM_GRAY;
+
+    scene->triangles[3].triangle.B = {-50, 20,  50};
+    scene->triangles[3].triangle.A = { 50,  0,  50};
+    scene->triangles[3].triangle.C = { 50, 20,  50};
+    scene->triangles[3].material = &PBM_GRAY;
+
+    // Setup lights
+    scene->numLights = 2;
+    scene->lights = (PointLight *) malloc(sizeof(PointLight) * scene->numLights);
+
+    scene->lights[0].position = {-5,3, 5};
+    scene->lights[0].color = {1, 1, 1, 0};
+
+    scene->lights[1].position = {5,5, 4};
+    scene->lights[1].color = {1, 1, 1, 0};
+
+    // Setup models
+    scene->numModels = 0;
+
+
+    // Setup background color
+    scene->backgroundColor = {0.05f, 0.05f, 0.05f, 1.0f};
+}
+
+/**
+ * Sets up the studio scene.
+ */
+void setupDragonScene(Scene *scene, Camera *camera, u32 width, u32 height, Mesh *studio) {
+    // Setup camera
+    camera->position = {0, 2, 0.1f};
+    camera->viewDirection = {0, 0, 1};
+    camera->upVector = {0, 1, 0};
+
+    camera->fovy = 70;
+    camera->nearClippingDistance = 0.1f;
+    camera->aspectRatio = (f32) width / (f32) height;
+    camera->exposure = 0.5f;
+
+    // Setup spheres
+    scene->numSpheres = 2;
+    scene->spheres = (SphereObject *) malloc(sizeof(SphereObject) * scene->numSpheres);
+
+    scene->spheres[0].sphere.position = {3, 2.5, 5};
+    scene->spheres[0].sphere.radius = 0.5;
+    scene->spheres[0].material = &PBM_ROUGH_RED;
+
+    scene->spheres[1].sphere.position = {-3, 2, 5};
+    scene->spheres[1].sphere.radius = 1;
+    scene->spheres[1].material = &PBM_METALLIC_GREEN;
+
+    // Setup triangles
+    scene->numTriangles = 0;
+
+    // Setup lights
+    scene->numLights = 4;
+    scene->lights = (PointLight *) malloc(sizeof(PointLight) * scene->numLights);
+
+    scene->lights[0].position = {-3,3, 1};
+    scene->lights[0].color = {3, 3, 3, 0};
+
+    scene->lights[1].position = {3,3, 1};
+    scene->lights[1].color = {3, 3, 3, 0};
+
+    scene->lights[2].position = {-3,3, 7};
+    scene->lights[2].color = {2, 2, 2, 0};
+
+    scene->lights[3].position = {3,3, 7};
+    scene->lights[3].color = {2, 2, 2, 0};
+
+    // Setup models
+    scene->numModels = 1;
+    scene->models = (Model *) malloc(sizeof(Model) * scene->numModels);
+
+    scene->models[0].mesh = studio;
+    scene->models[0].transform = Matrix4x4::identity();
+
+    // Setup background color
+    scene->backgroundColor = {0.05f, 0.05f, 0.05f, 1.0f};
+}
+
 int main() {
     // Seed the RNG
     srand(0);
@@ -117,112 +248,31 @@ int main() {
 
     Color *pixels = (Color *) malloc(sizeof(Color) * width *  height);
 
-    // Set up the camera
+    // Load meshes for scenes
+    Mesh dragon;
+    loadMesh(&dragon, "../res/objects/dragon.obj");
 
-    Camera camera = {};
 
-    camera.position = {0, 1, 0};
-    camera.viewDirection = {0, 0, 1};
-    camera.upVector = {0, 1, 0};
+    // Setup scene and camera
+    Scene scene;
+    Camera camera;
 
-    camera.fovy = 90;
-    camera.nearClippingDistance = 0.1f;
-    camera.aspectRatio = (f32) width / (f32) height;
-    camera.exposure = 1.0f;
-
-    // Set up some dummy spheres
-
-#define numTestSpheres 3
-    SphereObject spheres[numTestSpheres] = {};
-    spheres[0].sphere.position = {0, 2, 10};
-    spheres[0].sphere.radius = 2;
-    spheres[0].material = &PBM_ROUGH_RED;
-
-    spheres[1].sphere.position = {8, 3, 9};
-    spheres[1].sphere.radius = 3;
-    spheres[1].material = &PBM_METALLIC_GREEN;
-
-    spheres[2].sphere.position = {-2, 1, 8};
-    spheres[2].sphere.radius = 1;
-    spheres[2].material = &PBM_SMOOTH_BLUE;
-
-    // Set up some dummy triangles
-
-#define numTestTriangles 4
-    TriangleObject triangles[numTestTriangles];
-
-    // floor
-
-    triangles[0].triangle.B = {-50, 0, -50};
-    triangles[0].triangle.A = { 50, 0, -50};
-    triangles[0].triangle.C = {-50, 0,  50};
-    triangles[0].material = &PBM_GRAY;
-
-    triangles[1].triangle.B = {-50, 0,  50};
-    triangles[1].triangle.A = { 50, 0, -50};
-    triangles[1].triangle.C = { 50, 0,  50};
-    triangles[1].material = &PBM_GRAY;
-
-    // back wall
-
-    triangles[2].triangle.B = {-50, 20,  50};
-    triangles[2].triangle.A = {-50,  0,  50};
-    triangles[2].triangle.C = { 50,  0,  50};
-    triangles[2].material = &PBM_GRAY;
-
-    triangles[3].triangle.B = {-50, 20,  50};
-    triangles[3].triangle.A = { 50,  0,  50};
-    triangles[3].triangle.C = { 50, 20,  50};
-    triangles[3].material = &PBM_GRAY;
-
-    // Set up some dummy lights
-
-#define numTestLights 2
-    PointLight lights[numTestLights] = {};
-    lights[0].position = {-5,3, 5};
-    lights[0].color = {1, 1, 1, 0};
-
-    lights[1].position = {5,5, 4};
-    lights[1].color = {1, 1, 1, 0};
-
-    // Load dummy mesh
-
-    Mesh nol;
-    printf("loading mesh\n");
-    loadMesh(&nol, "../res/objects/nol.obj");
-    printf("loaded mesh\n");
-
-    // Set up dummy models
-
-#define numTestModels 1
-    Model models[numTestModels] = {};
-    models[0].mesh = &nol;
-    models[0].transform =
-            Matrix4x4::translation({0.4, 2, 4})
-            * Matrix4x4::rotationY(-135)
-            * Matrix4x4::scale({.5f, .5f, .5f});
-
-    // Build scene
-
-    Scene scene = {};
-    scene.backgroundColor = {0.05f, 0.05f, 0.05f, 1};
-    scene.spheres = spheres;
-    scene.numSpheres = numTestSpheres;
-    scene.triangles = triangles;
-    scene.numTriangles = numTestTriangles;
-    scene.models = models;
-    scene.numModels = numTestModels;
-    scene.lights = lights;
-    scene.numLights = numTestLights;
+    //setupThreeBallScene(&scene, &camera, width, height);
+    setupDragonScene(&scene, &camera, width, height, &dragon);
 
     // Build ray tracer from scene
     RayTracer rayTracer = createRayTracer(&scene);
 
+    // Render using either multi- or single-threading
 #ifdef USE_MULTI_THREADING
     threadedRender(width, height ,pixels, &rayTracer, camera);
 #else
     render(width, height ,pixels, &rayTracer, camera);
 #endif
+
+    // Free scene
+
+    freeScene(&scene);
 
     // Tone mapping
 
