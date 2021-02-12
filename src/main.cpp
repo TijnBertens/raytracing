@@ -29,6 +29,7 @@ int main() {
     camera.fovy = 90;
     camera.nearClippingDistance = 0.1f;
     camera.aspectRatio = (f32) width / (f32) height;
+    camera.exposure = 1.0f;
 
     // Set up some dummy spheres
 
@@ -145,17 +146,13 @@ int main() {
         }
     }
 
-    // Tone mapping and gamma correction
+    // Tone mapping
 
     for(u32 y = 0; y < height; y++) {
         for(u32 x = 0; x < width; x++) {
-            pixels[x + y * width].r = pixels[x + y * width].r / (pixels[x + y * width].r + 1);
-            pixels[x + y * width].g = pixels[x + y * width].g / (pixels[x + y * width].g + 1);
-            pixels[x + y * width].b = pixels[x + y * width].b / (pixels[x + y * width].b + 1);
-
-//            pixels[x + y * width].r = powf(pixels[x + y * width].r, 1.0f/2.2f);
-//            pixels[x + y * width].g = powf(pixels[x + y * width].g, 1.0f/2.2f);
-//            pixels[x + y * width].b = powf(pixels[x + y * width].b, 1.0f/2.2f);
+            pixels[x + y * width].r = 1.0 - exp(-pixels[x + y * width].r * camera.exposure);
+            pixels[x + y * width].g = 1.0 - exp(-pixels[x + y * width].g * camera.exposure);
+            pixels[x + y * width].b = 1.0 - exp(-pixels[x + y * width].b * camera.exposure);
         }
     }
 

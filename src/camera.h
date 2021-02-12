@@ -21,6 +21,7 @@ struct Camera {
     f32 fovy;                   // vertical field of view
     f32 nearClippingDistance;   // distance from camera to screen
     f32 aspectRatio;            // width over height
+    f32 exposure;               // exposure of the camera
 };
 
 /**
