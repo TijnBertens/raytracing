@@ -11,8 +11,6 @@ This project is a software raytracer made for educational purposes. It uses the 
 - Multi-threading;
 - Output to `.BMP` files.
 
-![buddha](images/buddha.bmp)
-
 ## Rendering
 For each pixel on the screen, multiple rays are shot into the scene. When a ray intersects with an object, the color of that ray is determined by approximating the rendering equation at the point of intersection. Shadow-rays are shot to all lights in the scene, checking for occlusion. The cook-torrance BRDF is used to determine the influence of each light on the surface point.
 
@@ -27,6 +25,8 @@ This raytracer can handle scenes with millions of triangles. Depending on the nu
 
 ## Model Loading
 Models and materials can be loaded directly from `.OBJ` and `.MTL` files respectively. This way, scenes can be edited in third party software. For the examples in this project, I used [Blender](https://www.blender.org/). Objects can have multiple materials, and per-face material indexing is supported.
+
+![buddha](images/buddha.bmp)
 
 ## Credits
 - In the making of the various scenes displayed in this project, models were used from the [Stanford 3D Scanning Repository](http://graphics.stanford.edu/data/3Dscanrep/). Credits go to the Stanford Computer Graphics Laboratory.
