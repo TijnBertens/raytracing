@@ -11,6 +11,8 @@ This project is a software raytracer made for educational purposes. It uses the 
 - Multi-threading;
 - Output to `.BMP` files.
 
+![buddha](images/buddha.bmp)
+
 ## Rendering
 For each pixel on the screen, multiple rays are shot into the scene. When a ray intersects with an object, the color of that ray is determined by approximating the rendering equation at the point of intersection. Shadow-rays are shot to all lights in the scene, checking for occlusion. The cook-torrance BRDF is used to determine the influence of each light on the surface point.
 
@@ -21,7 +23,7 @@ The different samples taken for each pixel are averaged, creating an Anti Aliasi
 ![balls](images/balls.bmp)
 
 ## Acceleration Structure
-This raytracer can handle scenes with millions of triangles, while still rendering images in less than a minute! To achieve this, an acceleration structure is built that greatly speeds up ray-triangle intersection. More specifically, this project uses a Bounding Volume Hierarchy (BVH) constructed using the Surface Area Heuristic (SAH) technique proposed by [Ingo Wald](https://doi.org/10.1109/RT.2007.4342588).
+This raytracer can handle scenes with millions of triangles. Depending on the number of smooth surfaces, rendering often takes less than a minute! To achieve this, an acceleration structure is built that greatly speeds up ray-triangle intersection. More specifically, this project uses a Bounding Volume Hierarchy (BVH) constructed using the Surface Area Heuristic (SAH) technique proposed by [Ingo Wald](https://doi.org/10.1109/RT.2007.4342588).
 
 ## Model Loading
 Models and materials can be loaded directly from `.OBJ` and `.MTL` files respectively. This way, scenes can be edited in third party software. For the examples in this project, I used [Blender](https://www.blender.org/). Objects can have multiple materials, and per-face material indexing is supported.

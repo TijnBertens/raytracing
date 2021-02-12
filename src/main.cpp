@@ -183,9 +183,9 @@ void setupThreeBallScene(Scene *scene, Camera *camera, u32 width, u32 height) {
 }
 
 /**
- * Sets up the studio scene.
+ * Sets up the dragon scene.
  */
-void setupDragonScene(Scene *scene, Camera *camera, u32 width, u32 height, Mesh *studio) {
+void setupDragonScene(Scene *scene, Camera *camera, u32 width, u32 height, Mesh *dragon) {
     // Setup camera
     camera->position = {0, 2, 0.1f};
     camera->viewDirection = {0, 0, 1};
@@ -216,22 +216,69 @@ void setupDragonScene(Scene *scene, Camera *camera, u32 width, u32 height, Mesh 
     scene->lights = (PointLight *) malloc(sizeof(PointLight) * scene->numLights);
 
     scene->lights[0].position = {-3,3, 1};
-    scene->lights[0].color = {3, 3, 3, 0};
+    scene->lights[0].color = fromHex(0x345D6AFF, 3);
 
     scene->lights[1].position = {3,3, 1};
-    scene->lights[1].color = {3, 3, 3, 0};
+    scene->lights[1].color = fromHex(0x345D6AFF, 3);
 
     scene->lights[2].position = {-3,3, 7};
-    scene->lights[2].color = {2, 2, 2, 0};
+    scene->lights[2].color = fromHex(0x345D6AFF, 2);
 
     scene->lights[3].position = {3,3, 7};
-    scene->lights[3].color = {2, 2, 2, 0};
+    scene->lights[3].color = fromHex(0x345D6AFF, 2);
 
     // Setup models
     scene->numModels = 1;
     scene->models = (Model *) malloc(sizeof(Model) * scene->numModels);
 
-    scene->models[0].mesh = studio;
+    scene->models[0].mesh = dragon;
+    scene->models[0].transform = Matrix4x4::identity();
+
+    // Setup background color
+    scene->backgroundColor = {0.05f, 0.05f, 0.05f, 1.0f};
+}
+
+/**
+ * Sets up the RGB dragon scene.
+ */
+void setupBuddhaScene(Scene *scene, Camera *camera, u32 width, u32 height, Mesh *buddha) {
+    // Setup camera
+    camera->position = {0, 1.5f, 1.25f};
+    camera->viewDirection = {0, 0, 1};
+    camera->upVector = {0, 1, 0};
+
+    camera->fovy = 70;
+    camera->nearClippingDistance = 0.1f;
+    camera->aspectRatio = (f32) width / (f32) height;
+    camera->exposure = 1.0f;
+
+    // Setup spheres
+    scene->numSpheres = 0;
+
+    // Setup triangles
+    scene->numTriangles = 0;
+
+    // Setup lights
+    scene->numLights = 4;
+    scene->lights = (PointLight *) malloc(sizeof(PointLight) * scene->numLights);
+
+    scene->lights[0].position = {-3,3, 1};
+    scene->lights[0].color = {1, 0.5, 0, 0};
+
+    scene->lights[1].position = {3,3, 1};
+    scene->lights[1].color = {1, 0.1, 0, 0};
+
+    scene->lights[2].position = {-3,3, 7};
+    scene->lights[2].color = {1, 0.6, 0, 0};
+
+    scene->lights[3].position = {3,3, 7};
+    scene->lights[3].color = {1, 0.1, 0, 0};
+
+    // Setup models
+    scene->numModels = 1;
+    scene->models = (Model *) malloc(sizeof(Model) * scene->numModels);
+
+    scene->models[0].mesh = buddha;
     scene->models[0].transform = Matrix4x4::identity();
 
     // Setup background color
@@ -249,8 +296,9 @@ int main() {
     Color *pixels = (Color *) malloc(sizeof(Color) * width *  height);
 
     // Load meshes for scenes
-    Mesh dragon;
+    Mesh dragon, buddha;
     loadMesh(&dragon, "../res/objects/dragon.obj");
+    loadMesh(&buddha, "../res/objects/buddha.obj");
 
 
     // Setup scene and camera
@@ -259,6 +307,7 @@ int main() {
 
     //setupThreeBallScene(&scene, &camera, width, height);
     setupDragonScene(&scene, &camera, width, height, &dragon);
+    //setupBuddhaScene(&scene, &camera, width, height, &buddha);
 
     // Build ray tracer from scene
     RayTracer rayTracer = createRayTracer(&scene);

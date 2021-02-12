@@ -52,6 +52,21 @@ struct IntColor {
 //----------------------
 
 /**
+ * Get a color from a hex (unsigned 32 bit int) value.
+ * @param intensity The intensity of the HDR color.
+ */
+inline Color fromHex(u32 hex, f32 intensity = 1.0f) {
+    Color result = {};
+
+    result.r = (float) (hex >> 24 & 0x000000FF) * intensity / 255.0f;
+    result.g = (float) (hex >> 16 & 0x000000FF) * intensity / 255.0f;
+    result.b = (float) (hex >>  8 & 0x000000FF) * intensity / 255.0f;
+    result.a = (float) (hex >>  0 & 0x000000FF) * intensity / 255.0f;
+
+    return result;
+}
+
+/**
  * Convert to 32bit IntColor.
  */
 inline IntColor toIntColor(Color c) {
